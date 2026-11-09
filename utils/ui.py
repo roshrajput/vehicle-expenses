@@ -421,3 +421,22 @@ def render_empty_state(icon: str, title: str, description: str):
         """,
         unsafe_allow_html=True,
     )
+
+
+def render_version_badge():
+    """Return an HTML snippet for a sleek version pill badge."""
+    from utils.constants import APP_VERSION
+    return f'<span class="badge badge-blue" style="font-size: 0.74rem; font-weight: 700; padding: 2px 7px; border-radius: 9999px;">{APP_VERSION}</span>'
+
+
+def render_app_footer():
+    """Render a subtle SaaS app footer with version number and backend status."""
+    from utils.constants import APP_NAME, APP_VERSION, APP_RELEASE_DATE
+    st.markdown(
+        f"""
+        <div style="text-align: center; margin: 48px auto 20px auto; padding-top: 16px; border-top: 1px solid #E2E8F0; max-width: 650px; font-size: 0.78rem; color: #94A3B8;">
+            <b>{APP_NAME}</b> <span class="badge badge-slate" style="font-size: 0.72rem; padding: 2px 7px; margin: 0 4px;">{APP_VERSION}</span> &nbsp;·&nbsp; Build {APP_RELEASE_DATE} &nbsp;·&nbsp; Google Sheets Connected
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )

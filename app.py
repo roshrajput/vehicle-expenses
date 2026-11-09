@@ -7,12 +7,12 @@ Includes connection check and first-time setup assistant.
 import json
 import streamlit as st
 from utils.sheets import check_connection, initialize_sheets
-from utils.constants import SHEET_ID
+from utils.constants import SHEET_ID, APP_NAME, APP_VERSION, APP_RELEASE_DATE
 from utils.ui import apply_custom_css
 
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="AutoExpense OS",
+    page_title=f"{APP_NAME} — {APP_VERSION}",
     page_icon="🚗",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -26,12 +26,15 @@ is_connected, message = check_connection()
 
 if not is_connected:
     st.markdown(
-        """
+        f"""
         <div style="text-align: center; margin: 30px 0 24px 0;">
             <div style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; background: linear-gradient(135deg, #2563EB, #1D4ED8); border-radius: 18px; box-shadow: 0 10px 20px -5px rgba(37,99,235,0.4); margin-bottom: 16px;">
                 <span style="font-size: 2rem;">⚡</span>
             </div>
-            <h1 style="margin: 0; font-size: 2.2rem; font-weight: 800; color: #0F172A; letter-spacing: -0.03em;">Welcome to AutoExpense OS</h1>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <h1 style="margin: 0; font-size: 2.2rem; font-weight: 800; color: #0F172A; letter-spacing: -0.03em;">Welcome to {APP_NAME}</h1>
+                <span class="badge badge-blue" style="font-size: 0.82rem; font-weight: 800; padding: 4px 9px; border-radius: 9999px;">{APP_VERSION}</span>
+            </div>
             <p style="margin: 6px auto 0 auto; max-width: 500px; font-size: 1rem; color: #64748B;">
                 Quickly connect your Google Spreadsheet to activate real-time expense tracking.
             </p>
@@ -121,6 +124,37 @@ if not st.session_state.get("sheets_initialized"):
         st.error(f"Failed to initialize Google Sheet tabs: {e}")
         st.stop()
 
+# ── Sidebar Brand Header & Version Indicator ─────────────────────────────────
+with st.sidebar:
+    st.markdown(
+        f"""
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 2px 2px 14px 2px; border-bottom: 1px solid #E2E8F0; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.35rem;">🚗</span>
+                <div>
+                    <div style="font-weight: 800; color: #0F172A; font-size: 1.02rem; line-height: 1.2;">{APP_NAME}</div>
+                    <div style="font-size: 0.72rem; color: #64748B;">Expense & Mileage OS</div>
+                </div>
+            </div>
+            <span class="badge badge-blue" style="font-weight: 800; font-size: 0.74rem; padding: 3px 8px; border-radius: 9999px;">{APP_VERSION}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    curr_user = st.session_state.get("user")
+    if curr_user:
+        u_name = curr_user.get("display_name", curr_user.get("username", "Driver"))
+        st.markdown(
+            f"""
+            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="font-size: 0.82rem; font-weight: 600; color: #1E293B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">👤 {u_name}</div>
+                <span style="font-size: 0.72rem; color: #10B981; font-weight: 600;">● Active</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
 # ── Define pages ─────────────────────────────────────────────────────────────
 login_page = st.Page("pages/login.py", title="Login / Register", icon="🔐", default=True)
 home_page = st.Page("pages/home.py", title="My Garage", icon="🚗")
@@ -134,3 +168,12 @@ else:
     nav = st.navigation([home_page, expenses_page, dashboard_page])
 
 nav.run()
+
+# ── Sidebar System / Version Footer ──────────────────────────────────────────
+with st.sidebar:
+    st.write("")
+    with st.expander(f"ℹ️ App Info ({APP_VERSION})", expanded=False):
+        st.caption(f"**App Name:** {APP_NAME}")
+        st.caption(f"**Version:** {APP_VERSION}")
+        st.caption(f"**Build:** {APP_RELEASE_DATE}")
+        st.caption("**Backend:** Google Sheets API (Online)")

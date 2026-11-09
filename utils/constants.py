@@ -3,6 +3,13 @@ Constants and configuration for the Vehicle Expense Tracker.
 """
 
 # ---------------------------------------------------------------------------
+# Application Metadata
+# ---------------------------------------------------------------------------
+APP_NAME = "AutoExpense OS"
+APP_VERSION = "v1.1.0"
+APP_RELEASE_DATE = "November 2026"
+
+# ---------------------------------------------------------------------------
 # Google Sheet
 # ---------------------------------------------------------------------------
 SHEET_ID = "1wR0BmHktXMGs1q9_39k7gg86BCdfuPbxuLMSwC6H85A"

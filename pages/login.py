@@ -5,7 +5,8 @@ Provides a modern, consumer-grade SaaS authentication UI.
 
 import streamlit as st
 from utils.auth import authenticate, register_user
-from utils.ui import apply_custom_css
+from utils.constants import APP_NAME, APP_VERSION
+from utils.ui import apply_custom_css, render_app_footer
 
 # ── Global Styling ──────────────────────────────────────────────────────────
 apply_custom_css()
@@ -16,12 +17,15 @@ if st.session_state.get("user") is not None:
 
 # ── Top Hero Banner ─────────────────────────────────────────────────────────
 st.markdown(
-    """
+    f"""
     <div style="text-align: center; margin: 24px 0 32px 0;">
         <div style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; background: linear-gradient(135deg, #2563EB, #1D4ED8); border-radius: 18px; box-shadow: 0 10px 20px -5px rgba(37,99,235,0.4); margin-bottom: 16px;">
             <span style="font-size: 2rem;">🚗</span>
         </div>
-        <h1 style="margin: 0; font-size: 2.2rem; font-weight: 800; color: #0F172A; letter-spacing: -0.03em;">AutoExpense OS</h1>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <h1 style="margin: 0; font-size: 2.2rem; font-weight: 800; color: #0F172A; letter-spacing: -0.03em;">{APP_NAME}</h1>
+            <span class="badge badge-blue" style="font-size: 0.82rem; font-weight: 800; padding: 4px 9px; border-radius: 9999px;">{APP_VERSION}</span>
+        </div>
         <p style="margin: 8px auto 0 auto; max-width: 480px; font-size: 1rem; color: #64748B; line-height: 1.5;">
             Track fuel efficiency, maintenance bills, and vehicle expenses seamlessly backed by Google Sheets.
         </p>
@@ -116,3 +120,5 @@ with main_col:
         """,
         unsafe_allow_html=True,
     )
+
+render_app_footer()

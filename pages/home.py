@@ -22,9 +22,10 @@ from utils.constants import (
     VEHICLE_TYPES,
     FUEL_TYPES,
     CURRENCY,
+    APP_VERSION,
 )
 from utils.helpers import generate_id, now_ist, fmt_currency, fmt_number
-from utils.ui import apply_custom_css, render_empty_state, render_vehicle_badge
+from utils.ui import apply_custom_css, render_empty_state, render_vehicle_badge, render_app_footer
 
 # ---------- Apply SaaS Theme ----------
 apply_custom_css()
@@ -39,7 +40,10 @@ display_name = user.get("display_name", "User")
 st.markdown(
     f"""
     <div class="welcome-banner">
-        <div class="welcome-eyebrow">Garage & Fleet Overview</div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="welcome-eyebrow">Garage & Fleet Overview</div>
+            <span class="badge badge-slate" style="font-size: 0.72rem; font-weight: 700;">{APP_VERSION}</span>
+        </div>
         <div class="welcome-title">Welcome, {display_name}! 👋</div>
         <div class="welcome-sub">Manage your registered vehicles, log expenses, and monitor fuel efficiency.</div>
     </div>
@@ -351,3 +355,5 @@ else:
                         if st.button("❌ Cancel", key=f"cancel_del_{vid}", use_container_width=True):
                             st.session_state.confirm_delete_vehicle = None
                             st.rerun()
+
+render_app_footer()

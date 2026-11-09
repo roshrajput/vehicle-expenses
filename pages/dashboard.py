@@ -12,9 +12,9 @@ from datetime import datetime, date, timedelta
 
 from utils.auth import require_auth, get_current_user
 from utils.sheets import get_records_by_user, clear_sheet_cache
-from utils.constants import TAB_VEHICLES, TAB_FUEL, TAB_SERVICE, TAB_MISC, CURRENCY
+from utils.constants import TAB_VEHICLES, TAB_FUEL, TAB_SERVICE, TAB_MISC, CURRENCY, APP_VERSION
 from utils.helpers import fmt_currency, fmt_number
-from utils.ui import apply_custom_css, render_empty_state, render_kpi
+from utils.ui import apply_custom_css, render_empty_state, render_kpi, render_app_footer
 
 # ── Apply SaaS Theme ────────────────────────────────────────────────────────
 apply_custom_css()
@@ -28,9 +28,12 @@ user_id = user["user_id"]
 dash_h1, dash_h2 = st.columns([8, 2])
 with dash_h1:
     st.markdown(
-        """
+        f"""
         <div style="margin-bottom: 18px;">
-            <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: #2563EB; font-weight: 700;">Executive Insights</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: #2563EB; font-weight: 700;">Executive Insights</div>
+                <span class="badge badge-slate" style="font-size: 0.72rem; font-weight: 700;">{APP_VERSION}</span>
+            </div>
             <h1 style="margin: 0; font-size: 2rem; font-weight: 800; color: #0F172A; letter-spacing: -0.03em;">Vehicle Analytics & KPIs</h1>
             <p style="margin: 4px 0 0 0; font-size: 0.95rem; color: #64748B;">Comprehensive financial tracking, fuel consumption metrics, and maintenance schedules.</p>
         </div>
@@ -552,3 +555,5 @@ with c_row2_2:
                 fig_price.update_xaxes(showgrid=True, gridcolor="#F1F5F9")
                 fig_price.update_yaxes(showgrid=True, gridcolor="#F1F5F9", tickprefix=f"{CURRENCY} ")
                 st.plotly_chart(fig_price, use_container_width=True, config=PLOTLY_CONFIG)
+
+render_app_footer()

@@ -24,9 +24,10 @@ from utils.constants import (
     SERVICE_TYPES,
     MISC_CATEGORIES,
     CURRENCY,
+    APP_VERSION,
 )
 from utils.helpers import generate_id, now_ist, today_date, fmt_currency, parse_date, fmt_number
-from utils.ui import apply_custom_css, render_empty_state, render_vehicle_badge
+from utils.ui import apply_custom_css, render_empty_state, render_vehicle_badge, render_app_footer
 
 # ── Apply Styling ────────────────────────────────────────────────────────────
 apply_custom_css()
@@ -93,6 +94,7 @@ with top_v_col1:
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <h2 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #0F172A;">{selected_vehicle_name}</h2>
                     {plate_html}
+                    <span class="badge badge-slate" style="font-size: 0.72rem; font-weight: 700;">{APP_VERSION}</span>
                 </div>
                 <div style="font-size: 0.85rem; color: #64748B; margin-top: 2px;">
                     Category: <b>{v_type}</b> &nbsp;|&nbsp; Primary Fuel: <b>{v_fuel}</b>
@@ -815,3 +817,5 @@ with misc_tab:
                             st.rerun()
     else:
         render_empty_state("📦", "No Miscellaneous Expenses", "Tolls, parking, and miscellaneous expenses will appear here.")
+
+render_app_footer()
