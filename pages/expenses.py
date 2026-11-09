@@ -152,79 +152,141 @@ with fuel_tab:
         )
         if st.button("❌ Cancel Edit", key="fuel_cancel_edit"):
             st.session_state.pop("editing_fuel", None)
+            st.session_state.pop("active_fuel_form_id", None)
             st.rerun()
 
-    fuel_defaults = {
-        "date": today_date(),
-        "odo_reading_km": 0.0,
-        "trip_km": 0.0,
-        "fuel_quantity_liters": 0.0,
-        "fuel_rate_per_liter": 0.0,
-        "total_fuel_cost": 0.0,
-        "is_full_tank": True,
-        "fuel_type": v_fuel if v_fuel in FUEL_TYPES else FUEL_TYPES[0],
-        "comments": "",
-    }
-    if is_editing_fuel:
-        fuel_defaults.update(
-            {
-                "date": _resolve_date(editing_fuel.get("date")),
-                "odo_reading_km": _safe_float(editing_fuel.get("odo_reading_km")),
-                "trip_km": _safe_float(editing_fuel.get("trip_km")),
-                "fuel_quantity_liters": _safe_float(editing_fuel.get("fuel_quantity_liters"), 0.0),
-                "fuel_rate_per_liter": _safe_float(editing_fuel.get("fuel_rate_per_liter")),
-                "total_fuel_cost": _safe_float(editing_fuel.get("total_fuel_cost")),
-                "is_full_tank": str(editing_fuel.get("is_full_tank", "TRUE")).upper() == "TRUE",
-                "fuel_type": _safe_str(editing_fuel.get("fuel_type"), v_fuel),
-                "comments": _safe_str(editing_fuel.get("comments")),
-            }
-        )
+    # Pre-fetch fuel records for vehicle to check if vehicle has any prior logs
+    df_fuel = get_records_by_vehicle(TAB_FUEL, vehicle_id)
+    is_brand_new_vehicle = df_fuel.empty
 
-    prefix = "fuel_edit_" if is_editing_fuel else "fuel_"
+    # Scoped form state keys to enable live mutual calculations without conflicts
+    form_id = f"fuel_edit_{editing_fuel['expense_id']}" if is_editing_fuel else f"fuel_add_{vehicle_id}"
+    k_date = f"{form_id}_date"
+    k_odo = f"{form_id}_odo"
+    k_trip = f"{form_id}_trip"
+    k_ftype = f"{form_id}_ftype"
+    k_qty = f"{form_id}_qty"
+    k_rate = f"{form_id}_rate"
+    k_total = f"{form_id}_total"
+    k_full_tank = f"{form_id}_full_tank"
+    k_first_fill = f"{form_id}_first_fill"
+    k_comments = f"{form_id}_comments"
+    k_last_edited = f"{form_id}_last_edited"
 
-    with st.form(key=f"{prefix}form", clear_on_submit=not is_editing_fuel):
+    # Initialize session state for this form instance
+    if st.session_state.get("active_fuel_form_id") != form_id:
+        st.session_state["active_fuel_form_id"] = form_id
+        if is_editing_fuel:
+            st.session_state[k_date] = _resolve_date(editing_fuel.get("date"))
+            st.session_state[k_odo] = _safe_float(editing_fuel.get("odo_reading_km"), 0.0)
+            st.session_state[k_trip] = _safe_float(editing_fuel.get("trip_km"), 0.0)
+            st.session_state[k_qty] = _safe_float(editing_fuel.get("fuel_quantity_liters"), 0.0)
+            st.session_state[k_rate] = _safe_float(editing_fuel.get("fuel_rate_per_liter"), 0.0)
+            st.session_state[k_total] = _safe_float(editing_fuel.get("total_fuel_cost"), 0.0)
+            st.session_state[k_full_tank] = str(editing_fuel.get("is_full_tank", "TRUE")).upper() == "TRUE"
+            st.session_state[k_first_fill] = str(editing_fuel.get("is_first_fill", "FALSE")).upper() == "TRUE"
+            st.session_state[k_comments] = _safe_str(editing_fuel.get("comments"))
+            ft = _safe_str(editing_fuel.get("fuel_type"), v_fuel)
+            st.session_state[k_ftype] = ft if ft in FUEL_TYPES else FUEL_TYPES[0]
+            st.session_state[k_last_edited] = "qty"
+        else:
+            st.session_state[k_date] = today_date()
+            st.session_state[k_odo] = 0.0
+            st.session_state[k_trip] = 0.0
+            st.session_state[k_qty] = 0.0
+            st.session_state[k_rate] = 0.0
+            st.session_state[k_total] = 0.0
+            st.session_state[k_full_tank] = True
+            st.session_state[k_first_fill] = is_brand_new_vehicle
+            st.session_state[k_comments] = ""
+            st.session_state[k_ftype] = v_fuel if v_fuel in FUEL_TYPES else FUEL_TYPES[0]
+            st.session_state[k_last_edited] = "qty"
+
+    # Mutual live-calculation callbacks
+    def on_fuel_qty_change():
+        st.session_state[k_last_edited] = "qty"
+        q = float(st.session_state.get(k_qty) or 0.0)
+        r = float(st.session_state.get(k_rate) or 0.0)
+        t = float(st.session_state.get(k_total) or 0.0)
+        if q > 0 and r > 0:
+            st.session_state[k_total] = round(q * r, 2)
+        elif q > 0 and t > 0:
+            st.session_state[k_rate] = round(t / q, 2)
+
+    def on_fuel_rate_change():
+        st.session_state[k_last_edited] = "rate"
+        q = float(st.session_state.get(k_qty) or 0.0)
+        r = float(st.session_state.get(k_rate) or 0.0)
+        t = float(st.session_state.get(k_total) or 0.0)
+        if q > 0 and r > 0:
+            st.session_state[k_total] = round(q * r, 2)
+        elif r > 0 and t > 0:
+            st.session_state[k_qty] = round(t / r, 2)
+
+    def on_fuel_total_change():
+        q = float(st.session_state.get(k_qty) or 0.0)
+        r = float(st.session_state.get(k_rate) or 0.0)
+        t = float(st.session_state.get(k_total) or 0.0)
+        last = st.session_state.get(k_last_edited, "rate")
+        if t > 0:
+            if last == "rate" and r > 0:
+                st.session_state[k_qty] = round(t / r, 2)
+            elif last == "qty" and q > 0:
+                st.session_state[k_rate] = round(t / q, 2)
+            elif r > 0:
+                st.session_state[k_qty] = round(t / r, 2)
+            elif q > 0:
+                st.session_state[k_rate] = round(t / q, 2)
+
+    with st.container(border=True):
         st.markdown("#### ⛽ Log Fuel Fill-Up")
-        st.caption("Record odometer reading and fuel amount. Rate or total cost will be calculated automatically.")
+        st.caption("Record odometer reading and fuel amount. Rate or total cost will calculate live automatically.")
         st.write("")
+
+        if is_brand_new_vehicle and not is_editing_fuel:
+            st.markdown(
+                """
+                <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 0.86rem; color: #166534;">
+                    ✨ <b>New Vehicle Baseline Fill</b>: If this is a brand new vehicle filled for the first time, keep <b>First Fuel-Up / Baseline Fill</b> checked. It allows <b>0 km Odometer</b> and establishes the baseline for all future mileage calculations.
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
         col1, col2 = st.columns(2)
         with col1:
-            fuel_date = st.date_input("Date of Fill-up", value=fuel_defaults["date"], key=f"{prefix}date")
+            fuel_date = st.date_input("Date of Fill-up", key=k_date)
             fuel_odo = st.number_input(
                 "Odometer Reading (km) *",
                 min_value=0.0,
                 step=1.0,
                 format="%.1f",
-                value=fuel_defaults["odo_reading_km"],
-                key=f"{prefix}odo",
-                help="Total kilometers shown on the dashboard",
+                key=k_odo,
+                help="Total kilometers shown on dashboard (can be 0 km for first fill-up)",
             )
             fuel_trip = st.number_input(
                 "Trip Meter Reading (km) — optional",
                 min_value=0.0,
                 step=1.0,
                 format="%.1f",
-                value=fuel_defaults["trip_km"],
-                key=f"{prefix}trip",
+                key=k_trip,
             )
 
         with col2:
-            ft_default = fuel_defaults["fuel_type"]
-            ft_idx = FUEL_TYPES.index(ft_default) if ft_default in FUEL_TYPES else 0
-            fuel_type = st.selectbox("Fuel Type", FUEL_TYPES, index=ft_idx, key=f"{prefix}fuel_type")
+            fuel_type = st.selectbox("Fuel Type", FUEL_TYPES, key=k_ftype)
             fuel_qty = st.number_input(
                 "Fuel Quantity Filled (Litres) *",
                 min_value=0.0,
                 step=0.5,
                 format="%.2f",
-                value=fuel_defaults["fuel_quantity_liters"],
-                key=f"{prefix}qty",
+                key=k_qty,
+                on_change=on_fuel_qty_change,
             )
 
         st.markdown(
             """
             <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 10px 14px; margin: 10px 0 16px 0; font-size: 0.85rem; color: #475569;">
-                💡 <b>Smart Cost Calculator</b>: Enter <b>either</b> Rate per Litre <b>or</b> Total Bill. The missing value will be auto-calculated.
+                ⚡ <b>Live Smart Cost Calculator</b>: Enter <b>Fuel Quantity</b> and <b>Rate</b> &rarr; <b>Total Bill</b> calculates instantly. Or enter <b>Total Bill</b> and <b>Rate/Qty</b> &rarr; the other value auto-computes!
             </div>
             """,
             unsafe_allow_html=True,
@@ -237,8 +299,8 @@ with fuel_tab:
                 min_value=0.0,
                 step=0.5,
                 format="%.2f",
-                value=fuel_defaults["fuel_rate_per_liter"],
-                key=f"{prefix}rate",
+                key=k_rate,
+                on_change=on_fuel_rate_change,
             )
         with cost_col2:
             fuel_total = st.number_input(
@@ -246,61 +308,81 @@ with fuel_tab:
                 min_value=0.0,
                 step=10.0,
                 format="%.2f",
-                value=fuel_defaults["total_fuel_cost"],
-                key=f"{prefix}total",
+                key=k_total,
+                on_change=on_fuel_total_change,
             )
+
+        fuel_first_fill = st.checkbox(
+            "🚩 First Fuel-Up / Baseline Fill (check if vehicle is brand new; allows 0 km Odometer)",
+            key=k_first_fill,
+            help="Check if this is the very first fuel fill-up for this vehicle (allows 0 km Odometer and starts fuel efficiency tracking).",
+        )
 
         fuel_full_tank = st.checkbox(
             "✅ Full Tank Fill (enables accurate km/l mileage computation via full-tank method)",
-            value=fuel_defaults["is_full_tank"],
-            key=f"{prefix}full_tank",
+            key=k_full_tank,
         )
 
         fuel_comments = st.text_input(
             "Fuel Station / Pump Notes (optional)",
-            value=fuel_defaults["comments"],
-            key=f"{prefix}comments",
+            key=k_comments,
             placeholder="e.g. IndianOil XP95, Shell V-Power, HP Highway Bunk",
         )
 
         st.write("")
-        submitted_fuel = st.form_submit_button(
+        submitted_fuel = st.button(
             "💾 Update Fuel Entry" if is_editing_fuel else "💾 Save Fuel Fill-Up",
             type="primary",
             use_container_width=True,
+            key=f"{form_id}_submit_btn",
         )
 
     if submitted_fuel:
-        if fuel_odo <= 0:
-            st.error("Please enter a valid odometer reading (> 0).")
-        elif fuel_qty <= 0:
+        fuel_odo_val = float(st.session_state.get(k_odo) or 0.0)
+        fuel_qty_val = float(st.session_state.get(k_qty) or 0.0)
+        fuel_rate_val = float(st.session_state.get(k_rate) or 0.0)
+        fuel_total_val = float(st.session_state.get(k_total) or 0.0)
+        fuel_trip_val = float(st.session_state.get(k_trip) or 0.0)
+        fuel_full_tank_val = bool(st.session_state.get(k_full_tank))
+        fuel_first_fill_val = bool(st.session_state.get(k_first_fill))
+        fuel_type_val = st.session_state.get(k_ftype, FUEL_TYPES[0])
+        fuel_date_val = st.session_state.get(k_date, today_date())
+        fuel_comments_val = str(st.session_state.get(k_comments) or "").strip()
+
+        if fuel_odo_val < 0:
+            st.error("Please enter a valid odometer reading (cannot be negative).")
+        elif fuel_odo_val == 0 and not fuel_first_fill_val:
+            st.error("Odometer reading is 0. If this is a brand new vehicle's first fill-up, please check the 'First Fuel-Up / Baseline Fill' box above.")
+        elif fuel_qty_val <= 0:
             st.error("Please enter a valid fuel quantity in litres (> 0).")
-        elif fuel_rate <= 0 and fuel_total <= 0:
+        elif fuel_rate_val <= 0 and fuel_total_val <= 0:
             st.error("Please provide either Fuel Rate per Litre OR Total Cost.")
         else:
-            if fuel_total > 0 and fuel_rate <= 0:
-                fuel_rate = round(fuel_total / fuel_qty, 2)
-            elif fuel_rate > 0 and fuel_total <= 0:
-                fuel_total = round(fuel_qty * fuel_rate, 2)
+            if fuel_total_val > 0 and fuel_rate_val <= 0:
+                fuel_rate_val = round(fuel_total_val / fuel_qty_val, 2)
+            elif fuel_rate_val > 0 and fuel_total_val <= 0:
+                fuel_total_val = round(fuel_qty_val * fuel_rate_val, 2)
             else:
-                fuel_rate = round(fuel_total / fuel_qty, 2)
+                fuel_rate_val = round(fuel_total_val / fuel_qty_val, 2)
 
             if is_editing_fuel:
                 eid = editing_fuel["expense_id"]
                 updates = {
-                    "date": str(fuel_date),
-                    "odo_reading_km": str(fuel_odo),
-                    "trip_km": str(fuel_trip),
-                    "fuel_quantity_liters": str(fuel_qty),
-                    "fuel_rate_per_liter": str(fuel_rate),
-                    "total_fuel_cost": str(fuel_total),
-                    "is_full_tank": "TRUE" if fuel_full_tank else "FALSE",
-                    "fuel_type": fuel_type,
-                    "comments": fuel_comments.strip(),
+                    "date": str(fuel_date_val),
+                    "odo_reading_km": str(fuel_odo_val),
+                    "trip_km": str(fuel_trip_val),
+                    "fuel_quantity_liters": str(fuel_qty_val),
+                    "fuel_rate_per_liter": str(fuel_rate_val),
+                    "total_fuel_cost": str(fuel_total_val),
+                    "is_full_tank": "TRUE" if fuel_full_tank_val else "FALSE",
+                    "is_first_fill": "TRUE" if fuel_first_fill_val else "FALSE",
+                    "fuel_type": fuel_type_val,
+                    "comments": fuel_comments_val,
                     "updated_at": now_ist(),
                 }
                 update_record(TAB_FUEL, "expense_id", eid, updates)
                 st.session_state.pop("editing_fuel", None)
+                st.session_state.pop("active_fuel_form_id", None)
                 st.toast("✅ Fuel entry updated in Google Sheets!")
                 st.rerun()
             else:
@@ -308,20 +390,22 @@ with fuel_tab:
                     "expense_id": generate_id(),
                     "vehicle_id": vehicle_id,
                     "user_id": user_id,
-                    "date": str(fuel_date),
-                    "odo_reading_km": str(fuel_odo),
-                    "trip_km": str(fuel_trip),
-                    "fuel_quantity_liters": str(fuel_qty),
-                    "fuel_rate_per_liter": str(fuel_rate),
-                    "total_fuel_cost": str(fuel_total),
-                    "is_full_tank": "TRUE" if fuel_full_tank else "FALSE",
-                    "fuel_type": fuel_type,
-                    "comments": fuel_comments.strip(),
+                    "date": str(fuel_date_val),
+                    "odo_reading_km": str(fuel_odo_val),
+                    "trip_km": str(fuel_trip_val),
+                    "fuel_quantity_liters": str(fuel_qty_val),
+                    "fuel_rate_per_liter": str(fuel_rate_val),
+                    "total_fuel_cost": str(fuel_total_val),
+                    "is_full_tank": "TRUE" if fuel_full_tank_val else "FALSE",
+                    "is_first_fill": "TRUE" if fuel_first_fill_val else "FALSE",
+                    "fuel_type": fuel_type_val,
+                    "comments": fuel_comments_val,
                     "created_at": now_ist(),
                     "is_deleted": "FALSE",
                     "updated_at": "",
                 }
                 append_record(TAB_FUEL, data)
+                st.session_state.pop("active_fuel_form_id", None)
                 st.toast("✅ Fuel fill-up recorded successfully!")
                 st.rerun()
 
@@ -339,19 +423,22 @@ with fuel_tab:
             rate_val = _safe_float(row.get("fuel_rate_per_liter"))
             total_val = _safe_float(row.get("total_fuel_cost"))
             is_full = str(row.get("is_full_tank", "")).upper() == "TRUE"
+            is_first = str(row.get("is_first_fill", "")).upper() == "TRUE"
             comment = _safe_str(row.get("comments"))
             eid = row.get("expense_id", str(idx))
 
             with st.container(border=True):
                 tank_pill = '<span class="badge badge-green">⛽ Full Tank</span>' if is_full else '<span class="badge badge-slate">Partial</span>'
+                first_pill = ' <span class="badge badge-purple">🚩 Baseline Fill</span>' if is_first else ''
+                odo_label = f"{fmt_number(odo_val, 1)} km (Baseline)" if (odo_val == 0 and is_first) else f"{fmt_number(odo_val, 1)} km"
                 st.markdown(
                     f"""
                     <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
                         <div>
                             <span style="font-weight: 700; color: #0F172A; font-size: 1.05rem;">{row.get('date', '')}</span>
-                            &nbsp; {tank_pill}
+                            &nbsp; {tank_pill}{first_pill}
                             <div style="font-size: 0.88rem; color: #475569; margin-top: 4px;">
-                                <b>{qty_val:.2f} L</b> filled @ {fmt_currency(rate_val)}/L &nbsp;·&nbsp; ODO: <b>{fmt_number(odo_val, 1)} km</b>
+                                <b>{qty_val:.2f} L</b> filled @ {fmt_currency(rate_val)}/L &nbsp;·&nbsp; ODO: <b>{odo_label}</b>
                             </div>
                             {f'<div style="font-size: 0.82rem; color: #64748B; margin-top: 3px;">💬 {comment}</div>' if comment else ''}
                         </div>

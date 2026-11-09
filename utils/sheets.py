@@ -87,6 +87,10 @@ def initialize_sheets():
             headers = ws.row_values(1)
             if not headers:
                 ws.update([columns], "A1")
+            else:
+                missing_cols = [c for c in columns if c not in headers]
+                if missing_cols:
+                    ws.update([headers + missing_cols], "A1")
 
 
 # ---------------------------------------------------------------------------

@@ -31,7 +31,7 @@ VEHICLES_COLUMNS = [
 FUEL_COLUMNS = [
     "expense_id", "vehicle_id", "user_id", "date", "odo_reading_km",
     "trip_km", "fuel_quantity_liters", "fuel_rate_per_liter",
-    "total_fuel_cost", "is_full_tank", "fuel_type", "comments",
+    "total_fuel_cost", "is_full_tank", "is_first_fill", "fuel_type", "comments",
     "created_at", "is_deleted", "updated_at",
 ]
 
