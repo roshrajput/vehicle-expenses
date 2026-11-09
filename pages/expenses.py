@@ -188,6 +188,24 @@ with fuel_tab:
     k_comments = f"{form_id}_comments"
     k_last_edited = f"{form_id}_last_edited"
 
+    # Determine base ODO for mutual calculations
+    if is_editing_fuel:
+        edit_odo = _safe_float(editing_fuel.get("odo_reading_km"), 0.0)
+        edit_trip = _safe_float(editing_fuel.get("trip_km"), 0.0)
+        if edit_trip > 0 and edit_odo >= edit_trip:
+            base_odo_for_form = edit_odo - edit_trip
+        else:
+            base_odo_for_form = 0.0
+            if not df_fuel.empty:
+                prev_logs = df_fuel[
+                    (df_fuel["expense_id"] != editing_fuel.get("expense_id")) &
+                    (pd.to_numeric(df_fuel["odo_reading_km"], errors="coerce") < edit_odo)
+                ]
+                if not prev_logs.empty:
+                    base_odo_for_form = float(pd.to_numeric(prev_logs["odo_reading_km"], errors="coerce").max())
+    else:
+        base_odo_for_form = last_known_odo
+
     # Initialize session state for this form instance
     if st.session_state.get("active_fuel_form_id") != form_id:
         st.session_state["active_fuel_form_id"] = form_id
@@ -195,7 +213,7 @@ with fuel_tab:
             st.session_state[k_date] = _resolve_date(editing_fuel.get("date"))
             st.session_state[k_odo] = _safe_float(editing_fuel.get("odo_reading_km"), 0.0)
             st.session_state[k_trip] = _safe_float(editing_fuel.get("trip_km"), 0.0)
-            st.session_state[k_base_odo] = last_known_odo
+            st.session_state[k_base_odo] = base_odo_for_form
             st.session_state[k_qty] = _safe_float(editing_fuel.get("fuel_quantity_liters"), 0.0)
             st.session_state[k_rate] = _safe_float(editing_fuel.get("fuel_rate_per_liter"), 0.0)
             st.session_state[k_total] = _safe_float(editing_fuel.get("total_fuel_cost"), 0.0)
@@ -207,8 +225,8 @@ with fuel_tab:
             st.session_state[k_last_edited] = "qty"
         else:
             st.session_state[k_date] = today_date()
-            st.session_state[k_base_odo] = last_known_odo
-            st.session_state[k_odo] = last_known_odo
+            st.session_state[k_base_odo] = base_odo_for_form
+            st.session_state[k_odo] = base_odo_for_form
             st.session_state[k_trip] = 0.0
             st.session_state[k_qty] = 0.0
             st.session_state[k_rate] = 0.0
@@ -225,12 +243,16 @@ with fuel_tab:
         base = float(st.session_state.get(k_base_odo) or 0.0)
         if t > 0:
             st.session_state[k_odo] = round(base + t, 1)
+        elif t == 0.0 and base > 0:
+            st.session_state[k_odo] = round(base, 1)
 
     def on_fuel_odo_change():
         o = float(st.session_state.get(k_odo) or 0.0)
         base = float(st.session_state.get(k_base_odo) or 0.0)
-        if o > base and base > 0:
+        if o >= base:
             st.session_state[k_trip] = round(o - base, 1)
+        else:
+            st.session_state[k_trip] = 0.0
 
     # Mutual live-calculation callbacks for Quantity, Rate & Total Cost
     def on_fuel_qty_change():
@@ -391,11 +413,12 @@ with fuel_tab:
         fuel_date_val = st.session_state.get(k_date, today_date())
         fuel_comments_val = str(st.session_state.get(k_comments) or "").strip()
 
-        # Auto-compute ODO if user only entered Trip
-        if fuel_trip_val > 0 and (fuel_odo_val <= 0 or fuel_odo_val == last_known_odo):
-            fuel_odo_val = round(last_known_odo + fuel_trip_val, 1)
-        elif fuel_odo_val > last_known_odo and fuel_trip_val == 0 and last_known_odo > 0:
-            fuel_trip_val = round(fuel_odo_val - last_known_odo, 1)
+        # Auto-compute Trip/ODO if only one was entered
+        base_val = float(st.session_state.get(k_base_odo) or 0.0)
+        if fuel_trip_val > 0 and (fuel_odo_val <= 0 or fuel_odo_val == base_val):
+            fuel_odo_val = round(base_val + fuel_trip_val, 1)
+        elif fuel_odo_val > base_val and fuel_trip_val == 0:
+            fuel_trip_val = round(fuel_odo_val - base_val, 1)
 
         if fuel_odo_val < 0:
             st.error("Please enter a valid odometer reading (cannot be negative).")
@@ -476,16 +499,15 @@ with fuel_tab:
         mileage_map = {}
         last_full_odo = None
         accumulated_fuel = 0.0
+        accumulated_trip = 0.0
 
         for idx_c, r in df_chrono.iterrows():
             eid = str(r.get("expense_id", idx_c))
             is_full = str(r.get("is_full_tank", "")).upper() == "TRUE"
-            is_first = str(r.get("is_first_fill", "")).upper() == "TRUE"
+            is_first = (idx_c == 0) or (str(r.get("is_first_fill", "")).upper() == "TRUE")
             cur_odo = _safe_float(r.get("odo_reading_km"))
             cur_trip = _safe_float(r.get("trip_km"))
             cur_qty = _safe_float(r.get("fuel_quantity_liters"))
-
-            accumulated_fuel += cur_qty
 
             if is_first:
                 mileage_map[eid] = {
@@ -495,13 +517,19 @@ with fuel_tab:
                 }
                 if is_full:
                     last_full_odo = cur_odo
-                    accumulated_fuel = 0.0
+                accumulated_fuel = 0.0
+                accumulated_trip = 0.0
                 continue
+
+            accumulated_fuel += cur_qty
+            accumulated_trip += cur_trip
 
             if is_full:
                 dist = 0.0
                 if last_full_odo is not None and cur_odo > last_full_odo:
                     dist = cur_odo - last_full_odo
+                elif accumulated_trip > 0:
+                    dist = accumulated_trip
                 elif cur_trip > 0:
                     dist = cur_trip
 
@@ -521,6 +549,7 @@ with fuel_tab:
                     }
                 last_full_odo = cur_odo
                 accumulated_fuel = 0.0
+                accumulated_trip = 0.0
             else:
                 mileage_map[eid] = {
                     "badge": '<span class="badge badge-slate">Partial Fill</span>',
@@ -558,68 +587,71 @@ with fuel_tab:
             unsafe_allow_html=True,
         )
 
-        # 3. Individual Fuel Cards (Sorted Newest First)
+        # 3. Individual Fuel Cards in Dedicated Scrollable Container
         df_fuel["_sort_date"] = pd.to_datetime(df_fuel["date"], errors="coerce")
         df_fuel = df_fuel.sort_values("_sort_date", ascending=False).reset_index(drop=True)
 
-        for idx, row in df_fuel.iterrows():
-            odo_val = _safe_float(row.get("odo_reading_km"))
-            qty_val = _safe_float(row.get("fuel_quantity_liters"))
-            rate_val = _safe_float(row.get("fuel_rate_per_liter"))
-            total_val = _safe_float(row.get("total_fuel_cost"))
-            is_full = str(row.get("is_full_tank", "")).upper() == "TRUE"
-            is_first = str(row.get("is_first_fill", "")).upper() == "TRUE"
-            comment = _safe_str(row.get("comments"))
-            eid = str(row.get("expense_id", idx))
+        with st.container(height=480, border=True):
+            for idx, row in df_fuel.iterrows():
+                odo_val = _safe_float(row.get("odo_reading_km"))
+                trip_val = _safe_float(row.get("trip_km"))
+                qty_val = _safe_float(row.get("fuel_quantity_liters"))
+                rate_val = _safe_float(row.get("fuel_rate_per_liter"))
+                total_val = _safe_float(row.get("total_fuel_cost"))
+                is_full = str(row.get("is_full_tank", "")).upper() == "TRUE"
+                comment = _safe_str(row.get("comments"))
+                eid = str(row.get("expense_id", idx))
 
-            m_info = mileage_map.get(eid, {})
-            mileage_badge = m_info.get("badge", "")
-            interval_dist = m_info.get("dist", 0.0)
+                m_info = mileage_map.get(eid, {})
+                mileage_badge = m_info.get("badge", "")
+                interval_dist = m_info.get("dist", 0.0)
 
-            tank_pill = '<span class="badge badge-green">⛽ Full Tank</span>' if is_full else '<span class="badge badge-slate">Partial</span>'
-            odo_label = f"{fmt_number(odo_val, 1)} km (Baseline)" if (odo_val == 0 and is_first) else f"{fmt_number(odo_val, 1)} km"
-            dist_sub = f" &nbsp;·&nbsp; Distance: <b>{fmt_number(interval_dist, 1)} km</b>" if interval_dist > 0 else ""
+                tank_pill = '<span class="badge badge-green">⛽ Full</span>' if is_full else '<span class="badge badge-slate">Partial</span>'
+                is_baseline = "Baseline" in mileage_badge
+                odo_label = f"{fmt_number(odo_val, 1)} km (Baseline)" if (odo_val == 0 and is_baseline) else f"{fmt_number(odo_val, 1)} km"
+                dist_sub = f" &nbsp;•&nbsp; Dist: <b>{fmt_number(interval_dist, 1)} km</b>" if interval_dist > 0 else (f" &nbsp;•&nbsp; Trip: <b>{fmt_number(trip_val, 1)} km</b>" if trip_val > 0 else "")
+                comment_sub = f" &nbsp;•&nbsp; 💬 <i>{comment}</i>" if comment else ""
 
-            with st.container(border=True):
-                st.markdown(
-                    f"""
-                    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
-                        <div>
-                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                <span style="font-weight: 700; color: #0F172A; font-size: 1.05rem;">{row.get('date', '')}</span>
-                                {tank_pill}
-                                {mileage_badge}
+                card_c1, card_c2 = st.columns([8.2, 1.8], vertical_alignment="center")
+                with card_c1:
+                    st.markdown(
+                        f"""
+                        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 9px 13px; margin-bottom: 2px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                    <span style="font-weight: 700; color: #0F172A; font-size: 0.96rem;">{row.get('date', '')}</span>
+                                    {tank_pill}
+                                    {mileage_badge}
+                                </div>
+                                <div style="font-size: 1.15rem; font-weight: 800; color: #2563EB; white-space: nowrap;">
+                                    {fmt_currency(total_val)}
+                                </div>
                             </div>
-                            <div style="font-size: 0.88rem; color: #475569; margin-top: 5px;">
-                                <b>{qty_val:.2f} L</b> filled @ {fmt_currency(rate_val)}/L &nbsp;·&nbsp; ODO: <b>{odo_label}</b>{dist_sub}
+                            <div style="font-size: 0.82rem; color: #475569; margin-top: 4px;">
+                                <b>{qty_val:.2f} L</b> @ {fmt_currency(rate_val)}/L &nbsp;•&nbsp; ODO: <b>{odo_label}</b>{dist_sub}{comment_sub}
                             </div>
-                            {f'<div style="font-size: 0.82rem; color: #64748B; margin-top: 3px;">💬 {comment}</div>' if comment else ''}
                         </div>
-                        <div style="text-align: right; white-space: nowrap;">
-                            <div style="font-size: 1.25rem; font-weight: 800; color: #2563EB;">{fmt_currency(total_val)}</div>
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                st.write("")
-                f_c1, f_c2, _ = st.columns([1, 1, 2])
-                with f_c1:
-                    if st.button("✏️ Edit", key=f"f_edit_{eid}", use_container_width=True):
-                        st.session_state["editing_fuel"] = row.to_dict()
-                        st.rerun()
-                with f_c2:
-                    confirm_key = f"del_confirm_fuel_{eid}"
-                    if st.session_state.get(confirm_key):
-                        if st.button("⚠️ Confirm", key=f"f_del_yes_{eid}", type="primary", use_container_width=True):
-                            soft_delete_record(TAB_FUEL, "expense_id", eid)
-                            st.session_state.pop(confirm_key, None)
-                            st.toast("🗑️ Entry deleted.")
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                with card_c2:
+                    f_c1, f_c2 = st.columns(2)
+                    with f_c1:
+                        if st.button("✏️", key=f"f_edit_{eid}", help="Edit this entry", use_container_width=True):
+                            st.session_state["editing_fuel"] = row.to_dict()
                             st.rerun()
-                    else:
-                        if st.button("🗑️ Delete", key=f"f_del_{eid}", use_container_width=True):
-                            st.session_state[confirm_key] = True
-                            st.rerun()
+                    with f_c2:
+                        confirm_key = f"del_confirm_fuel_{eid}"
+                        if st.session_state.get(confirm_key):
+                            if st.button("⚠️", key=f"f_del_yes_{eid}", help="Click again to confirm delete", type="primary", use_container_width=True):
+                                soft_delete_record(TAB_FUEL, "expense_id", eid)
+                                st.session_state.pop(confirm_key, None)
+                                st.toast("🗑️ Entry deleted.")
+                                st.rerun()
+                        else:
+                            if st.button("🗑️", key=f"f_del_{eid}", help="Delete this entry", use_container_width=True):
+                                st.session_state[confirm_key] = True
+                                st.rerun()
     else:
         render_empty_state("⛽", "No Fuel Records Yet", "Log your first fuel fill-up using the form above.")
 

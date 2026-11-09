@@ -7,7 +7,7 @@ Includes connection check and first-time setup assistant.
 import json
 import streamlit as st
 from utils.sheets import check_connection, initialize_sheets
-from utils.constants import SHEET_ID, APP_NAME, APP_VERSION, APP_RELEASE_DATE
+from utils.constants import SHEET_ID, APP_NAME, APP_VERSION, APP_RELEASE_DATE, GIT_COMMIT_HASH
 from utils.ui import apply_custom_css
 
 # ── Page config ──────────────────────────────────────────────────────────────
@@ -175,5 +175,7 @@ with st.sidebar:
     with st.expander(f"ℹ️ App Info ({APP_VERSION})", expanded=False):
         st.caption(f"**App Name:** {APP_NAME}")
         st.caption(f"**Version:** {APP_VERSION}")
+        if GIT_COMMIT_HASH:
+            st.caption(f"**Commit:** `{GIT_COMMIT_HASH}`")
         st.caption(f"**Build:** {APP_RELEASE_DATE}")
         st.caption("**Backend:** Google Sheets API (Online)")

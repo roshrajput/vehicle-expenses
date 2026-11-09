@@ -6,26 +6,23 @@ Constants and configuration for the Vehicle Expense Tracker.
 # Application Metadata
 # ---------------------------------------------------------------------------
 APP_NAME = "AutoExpense OS"
-APP_BASE_VERSION = "v1.1.0"
+APP_VERSION = "v1.1.0"
 APP_RELEASE_DATE = "November 2026"
 
 
-def _resolve_app_version() -> str:
-    """Dynamically determine version string with git short hash if available."""
+def _resolve_git_hash() -> str:
+    """Dynamically determine git short hash for internal debugging."""
     try:
         import subprocess
-        sha = subprocess.check_output(
+        return subprocess.check_output(
             ["git", "rev-parse", "--short", "HEAD"],
             stderr=subprocess.DEVNULL
         ).decode("utf-8").strip()
-        if sha:
-            return f"{APP_BASE_VERSION} ({sha})"
     except Exception:
-        pass
-    return APP_BASE_VERSION
+        return ""
 
 
-APP_VERSION = _resolve_app_version()
+GIT_COMMIT_HASH = _resolve_git_hash()
 
 # ---------------------------------------------------------------------------
 # Google Sheet
