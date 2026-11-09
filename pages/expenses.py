@@ -343,41 +343,41 @@ with fuel_tab:
             eid = row.get("expense_id", str(idx))
 
             with st.container(border=True):
-                c_main, c_act1, c_act2 = st.columns([7, 1.2, 1.2])
-                with c_main:
-                    tank_pill = '<span class="badge badge-green">⛽ Full Tank</span>' if is_full else '<span class="badge badge-slate">Partial</span>'
-                    st.markdown(
-                        f"""
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <div>
-                                <span style="font-weight: 700; color: #0F172A; font-size: 1.05rem;">{row.get('date', '')}</span>
-                                &nbsp; {tank_pill}
-                                <div style="font-size: 0.88rem; color: #475569; margin-top: 4px;">
-                                    <b>{qty_val:.2f} L</b> filled @ {fmt_currency(rate_val)}/L &nbsp;·&nbsp; ODO: <b>{fmt_number(odo_val, 1)} km</b>
-                                </div>
-                                {f'<div style="font-size: 0.82rem; color: #64748B; margin-top: 3px;">💬 {comment}</div>' if comment else ''}
+                tank_pill = '<span class="badge badge-green">⛽ Full Tank</span>' if is_full else '<span class="badge badge-slate">Partial</span>'
+                st.markdown(
+                    f"""
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
+                        <div>
+                            <span style="font-weight: 700; color: #0F172A; font-size: 1.05rem;">{row.get('date', '')}</span>
+                            &nbsp; {tank_pill}
+                            <div style="font-size: 0.88rem; color: #475569; margin-top: 4px;">
+                                <b>{qty_val:.2f} L</b> filled @ {fmt_currency(rate_val)}/L &nbsp;·&nbsp; ODO: <b>{fmt_number(odo_val, 1)} km</b>
                             </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 1.25rem; font-weight: 800; color: #2563EB;">{fmt_currency(total_val)}</div>
-                            </div>
+                            {f'<div style="font-size: 0.82rem; color: #64748B; margin-top: 3px;">💬 {comment}</div>' if comment else ''}
                         </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                with c_act1:
+                        <div style="text-align: right; white-space: nowrap;">
+                            <div style="font-size: 1.25rem; font-weight: 800; color: #2563EB;">{fmt_currency(total_val)}</div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                st.write("")
+                f_c1, f_c2, _ = st.columns([1, 1, 2])
+                with f_c1:
                     if st.button("✏️ Edit", key=f"f_edit_{eid}", use_container_width=True):
                         st.session_state["editing_fuel"] = row.to_dict()
                         st.rerun()
-                with c_act2:
+                with f_c2:
                     confirm_key = f"del_confirm_fuel_{eid}"
                     if st.session_state.get(confirm_key):
-                        if st.button("Confirm", key=f"f_del_yes_{eid}", type="primary", use_container_width=True):
+                        if st.button("⚠️ Confirm", key=f"f_del_yes_{eid}", type="primary", use_container_width=True):
                             soft_delete_record(TAB_FUEL, "expense_id", eid)
                             st.session_state.pop(confirm_key, None)
                             st.toast("🗑️ Entry deleted.")
                             st.rerun()
                     else:
-                        if st.button("🗑️ Del", key=f"f_del_{eid}", use_container_width=True):
+                        if st.button("🗑️ Delete", key=f"f_del_{eid}", use_container_width=True):
                             st.session_state[confirm_key] = True
                             st.rerun()
     else:
@@ -531,41 +531,41 @@ with service_tab:
             eid = row.get("expense_id", str(idx))
 
             with st.container(border=True):
-                c_main, c_act1, c_act2 = st.columns([7, 1.2, 1.2])
-                with c_main:
-                    st.markdown(
-                        f"""
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <div>
-                                <span style="font-weight: 700; color: #0F172A; font-size: 1.05rem;">{row.get('date', '')}</span>
-                                &nbsp; <span class="badge badge-amber">🔧 {row.get('service_type', '')}</span>
-                                <div style="font-size: 0.88rem; color: #475569; margin-top: 4px;">
-                                    ODO at service: <b>{fmt_number(odo_val, 1)} km</b>
-                                </div>
-                                {f'<div style="font-size: 0.82rem; color: #64748B; margin-top: 3px;">🔩 <b>Parts:</b> {parts}</div>' if parts else ''}
-                                {f'<div style="font-size: 0.82rem; color: #64748B; margin-top: 2px;">💬 {comment}</div>' if comment else ''}
+                st.markdown(
+                    f"""
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
+                        <div>
+                            <span style="font-weight: 700; color: #0F172A; font-size: 1.05rem;">{row.get('date', '')}</span>
+                            &nbsp; <span class="badge badge-amber">🔧 {row.get('service_type', '')}</span>
+                            <div style="font-size: 0.88rem; color: #475569; margin-top: 4px;">
+                                ODO at service: <b>{fmt_number(odo_val, 1)} km</b>
                             </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 1.25rem; font-weight: 800; color: #D97706;">{fmt_currency(cost_val)}</div>
-                            </div>
+                            {f'<div style="font-size: 0.82rem; color: #64748B; margin-top: 3px;">🔩 <b>Parts:</b> {parts}</div>' if parts else ''}
+                            {f'<div style="font-size: 0.82rem; color: #64748B; margin-top: 2px;">💬 {comment}</div>' if comment else ''}
                         </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                with c_act1:
+                        <div style="text-align: right; white-space: nowrap;">
+                            <div style="font-size: 1.25rem; font-weight: 800; color: #D97706;">{fmt_currency(cost_val)}</div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                st.write("")
+                s_c1, s_c2, _ = st.columns([1, 1, 2])
+                with s_c1:
                     if st.button("✏️ Edit", key=f"s_edit_{eid}", use_container_width=True):
                         st.session_state["editing_service"] = row.to_dict()
                         st.rerun()
-                with c_act2:
+                with s_c2:
                     confirm_key = f"del_confirm_svc_{eid}"
                     if st.session_state.get(confirm_key):
-                        if st.button("Confirm", key=f"s_del_yes_{eid}", type="primary", use_container_width=True):
+                        if st.button("⚠️ Confirm", key=f"s_del_yes_{eid}", type="primary", use_container_width=True):
                             soft_delete_record(TAB_SERVICE, "expense_id", eid)
                             st.session_state.pop(confirm_key, None)
                             st.toast("🗑️ Service entry deleted.")
                             st.rerun()
                     else:
-                        if st.button("🗑️ Del", key=f"s_del_{eid}", use_container_width=True):
+                        if st.button("🗑️ Delete", key=f"s_del_{eid}", use_container_width=True):
                             st.session_state[confirm_key] = True
                             st.rerun()
     else:
@@ -693,37 +693,37 @@ with misc_tab:
             eid = row.get("expense_id", str(idx))
 
             with st.container(border=True):
-                c_main, c_act1, c_act2 = st.columns([7, 1.2, 1.2])
-                with c_main:
-                    st.markdown(
-                        f"""
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <div>
-                                <span style="font-weight: 700; color: #0F172A; font-size: 1.05rem;">{row.get('date', '')}</span>
-                                &nbsp; <span class="badge badge-green">📦 {row.get('category', '')}</span>
-                                {f'<div style="font-size: 0.88rem; color: #475569; margin-top: 4px;">💬 {comment}</div>' if comment else ''}
-                            </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 1.25rem; font-weight: 800; color: #059669;">{fmt_currency(amt_val)}</div>
-                            </div>
+                st.markdown(
+                    f"""
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
+                        <div>
+                            <span style="font-weight: 700; color: #0F172A; font-size: 1.05rem;">{row.get('date', '')}</span>
+                            &nbsp; <span class="badge badge-green">📦 {row.get('category', '')}</span>
+                            {f'<div style="font-size: 0.88rem; color: #475569; margin-top: 4px;">💬 {comment}</div>' if comment else ''}
                         </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                with c_act1:
+                        <div style="text-align: right; white-space: nowrap;">
+                            <div style="font-size: 1.25rem; font-weight: 800; color: #059669;">{fmt_currency(amt_val)}</div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                st.write("")
+                m_c1, m_c2, _ = st.columns([1, 1, 2])
+                with m_c1:
                     if st.button("✏️ Edit", key=f"m_edit_{eid}", use_container_width=True):
                         st.session_state["editing_misc"] = row.to_dict()
                         st.rerun()
-                with c_act2:
+                with m_c2:
                     confirm_key = f"del_confirm_misc_{eid}"
                     if st.session_state.get(confirm_key):
-                        if st.button("Confirm", key=f"m_del_yes_{eid}", type="primary", use_container_width=True):
+                        if st.button("⚠️ Confirm", key=f"m_del_yes_{eid}", type="primary", use_container_width=True):
                             soft_delete_record(TAB_MISC, "expense_id", eid)
                             st.session_state.pop(confirm_key, None)
                             st.toast("🗑️ Entry deleted.")
                             st.rerun()
                     else:
-                        if st.button("🗑️ Del", key=f"m_del_{eid}", use_container_width=True):
+                        if st.button("🗑️ Delete", key=f"m_del_{eid}", use_container_width=True):
                             st.session_state[confirm_key] = True
                             st.rerun()
     else:

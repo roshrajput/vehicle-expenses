@@ -412,14 +412,16 @@ COLOR_SERVICE = "#D97706"  # Amber
 COLOR_MISC = "#059669"     # Emerald Green
 COLOR_TOTAL = "#4F46E5"    # Indigo
 COLOR_MAP = {"Fuel": COLOR_FUEL, "Service": COLOR_SERVICE, "Misc": COLOR_MISC, "Total": COLOR_TOTAL}
-CHART_HEIGHT = 380
+CHART_HEIGHT = 330
+PLOTLY_CONFIG = {"responsive": True, "displayModeBar": False}
 
 BASE_LAYOUT = dict(
     plot_bgcolor="#FFFFFF",
     paper_bgcolor="#FFFFFF",
-    font=dict(family="Plus Jakarta Sans, sans-serif", color="#334155", size=12),
-    margin=dict(l=20, r=20, t=50, b=30),
-    legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="right", x=1),
+    font=dict(family="Plus Jakarta Sans, sans-serif", color="#334155", size=11),
+    margin=dict(l=15, r=15, t=40, b=25),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    autosize=True,
     height=CHART_HEIGHT,
 )
 
@@ -456,7 +458,7 @@ with c_row1_1:
             fig_trend.update_layout(**BASE_LAYOUT)
             fig_trend.update_xaxes(dtick="M1", tickformat="%b %Y", showgrid=True, gridcolor="#F1F5F9")
             fig_trend.update_yaxes(showgrid=True, gridcolor="#F1F5F9", tickprefix=f"{CURRENCY} ")
-            st.plotly_chart(fig_trend, use_container_width=True)
+            st.plotly_chart(fig_trend, use_container_width=True, config=PLOTLY_CONFIG)
 
 with c_row1_2:
     with st.container(border=True):
@@ -483,7 +485,7 @@ with c_row1_2:
                 hovertemplate="<b>%{label}</b><br>Spent: " + CURRENCY + "%{value:,.2f}<br>Share: %{percent}",
             )
             fig_donut.update_layout(**BASE_LAYOUT)
-            st.plotly_chart(fig_donut, use_container_width=True)
+            st.plotly_chart(fig_donut, use_container_width=True, config=PLOTLY_CONFIG)
 
 st.write("")
 
@@ -517,7 +519,7 @@ with c_row2_1:
             )
             fig_bar.update_layout(**BASE_LAYOUT)
             fig_bar.update_xaxes(showgrid=True, gridcolor="#F1F5F9", tickprefix=f"{CURRENCY} ")
-            st.plotly_chart(fig_bar, use_container_width=True)
+            st.plotly_chart(fig_bar, use_container_width=True, config=PLOTLY_CONFIG)
 
 with c_row2_2:
     with st.container(border=True):
@@ -549,4 +551,4 @@ with c_row2_2:
                 fig_price.update_layout(**BASE_LAYOUT)
                 fig_price.update_xaxes(showgrid=True, gridcolor="#F1F5F9")
                 fig_price.update_yaxes(showgrid=True, gridcolor="#F1F5F9", tickprefix=f"{CURRENCY} ")
-                st.plotly_chart(fig_price, use_container_width=True)
+                st.plotly_chart(fig_price, use_container_width=True, config=PLOTLY_CONFIG)

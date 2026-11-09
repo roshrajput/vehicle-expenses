@@ -30,8 +30,14 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ── Centered Auth Card Container ────────────────────────────────────────────
-left_pad, main_col, right_pad = st.columns([1, 1.8, 1])
+# ── Centered Auth Card Container (Responsive across mobile & desktop) ──────
+col_l, main_col, col_r = st.columns([1, 2.4, 1])
+
+with col_l:
+    st.markdown('<div class="hide-on-mobile"></div>', unsafe_allow_html=True)
+
+with col_r:
+    st.markdown('<div class="hide-on-mobile"></div>', unsafe_allow_html=True)
 
 with main_col:
     # Feature Badges
