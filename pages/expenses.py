@@ -27,7 +27,7 @@ from utils.constants import (
     APP_VERSION,
 )
 from utils.helpers import generate_id, now_ist, today_date, fmt_currency, parse_date, fmt_number, escape_html
-from utils.ui import apply_custom_css, render_empty_state, render_vehicle_badge, render_app_footer
+from utils.ui import apply_custom_css, render_empty_state, render_vehicle_badge, render_app_footer, render_kpi
 
 # ── Apply Styling ────────────────────────────────────────────────────────────
 apply_custom_css()
@@ -107,8 +107,8 @@ with top_v_col1:
 st.write("")
 
 # ── Tabs ─────────────────────────────────────────────────────────────────────
-fuel_tab, service_tab, misc_tab = st.tabs(
-    ["⛽ Fuel Fill-Up", "🔧 Service & Maintenance", "📦 Miscellaneous & Tolls"]
+fuel_tab, service_tab, misc_tab, planner_tab = st.tabs(
+    ["⛽ Fuel Fill-Up", "🔧 Service & Maintenance", "📦 Miscellaneous & Tolls", "🧭 Smart Trip Planner"]
 )
 
 
@@ -133,6 +133,60 @@ def _resolve_date(raw_val):
         return raw_val.date() if isinstance(raw_val, datetime) else raw_val
     parsed = parse_date(raw_val)
     return parsed if parsed else today_date()
+
+
+def _get_vehicle_fuel_metrics(df_fuel_in: pd.DataFrame):
+    """Calculate the latest fuel price and rolling average mileage for trip planning."""
+    if df_fuel_in.empty:
+        return 105.0, 35.0
+
+    rates = pd.to_numeric(df_fuel_in["fuel_rate_per_liter"], errors="coerce").dropna()
+    latest_r = float(rates.iloc[-1]) if not rates.empty else 105.0
+
+    df_c = df_fuel_in.copy()
+    df_c["_dt"] = pd.to_datetime(df_c["date"], errors="coerce")
+    df_c["_odo"] = pd.to_numeric(df_c["odo_reading_km"], errors="coerce").fillna(0.0)
+    df_c = df_c.sort_values(by=["_dt", "_odo"], ascending=[True, True]).reset_index(drop=True)
+
+    last_full_odo = None
+    accum_fuel = 0.0
+    accum_trip = 0.0
+    kmls = []
+
+    for idx_c, r in df_c.iterrows():
+        is_full = str(r.get("is_full_tank", "")).upper() == "TRUE"
+        is_first = (idx_c == 0) or (str(r.get("is_first_fill", "")).upper() == "TRUE")
+        cur_odo = _safe_float(r.get("odo_reading_km"))
+        cur_trip = _safe_float(r.get("trip_km"))
+        cur_qty = _safe_float(r.get("fuel_quantity_liters"))
+
+        if is_first:
+            if is_full:
+                last_full_odo = cur_odo
+            accum_fuel = 0.0
+            accum_trip = 0.0
+            continue
+
+        accum_fuel += cur_qty
+        accum_trip += cur_trip
+
+        if is_full:
+            dist = 0.0
+            if last_full_odo is not None and cur_odo > last_full_odo:
+                dist = cur_odo - last_full_odo
+            elif accum_trip > 0:
+                dist = accum_trip
+            elif cur_trip > 0:
+                dist = cur_trip
+
+            if dist > 0 and accum_fuel > 0:
+                kmls.append(dist / accum_fuel)
+            last_full_odo = cur_odo
+            accum_fuel = 0.0
+            accum_trip = 0.0
+
+    avg_kml_calc = round(sum(kmls) / len(kmls), 1) if kmls else 35.0
+    return latest_r, avg_kml_calc
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -997,5 +1051,154 @@ with misc_tab:
                             st.rerun()
     else:
         render_empty_state("📦", "No Miscellaneous Expenses", "Tolls, parking, and miscellaneous expenses will appear here.")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  🧭 SMART TRIP PLANNER TAB
+# ═══════════════════════════════════════════════════════════════════════════════
+with planner_tab:
+    st.markdown("#### 🧭 Smart Trip Cost & Fuel Planner")
+    st.caption("Plan your journey budget, fuel requirements, and pump stops using your vehicle's actual real-world mileage.")
+    st.write("")
+
+    latest_rate_val, auto_kml_val = _get_vehicle_fuel_metrics(df_fuel)
+
+    with st.container(border=True):
+        st.markdown(f"##### 📍 Journey Parameters for **{escape_html(selected_vehicle_name)}**")
+        p_c1, p_c2 = st.columns(2)
+        with p_c1:
+            plan_dist = st.number_input(
+                "One-Way Trip Distance (km)",
+                min_value=5.0,
+                max_value=15000.0,
+                value=250.0,
+                step=25.0,
+                format="%.1f",
+                key="trip_plan_distance",
+                help="Estimated one-way driving distance (e.g. from Google Maps)",
+            )
+            is_round = st.checkbox(
+                "🔄 Round Trip (Double distance for return journey)",
+                value=False,
+                key="trip_plan_round",
+            )
+
+        with p_c2:
+            plan_rate = st.number_input(
+                "Expected Fuel Rate (₹ / Litre)",
+                min_value=50.0,
+                max_value=250.0,
+                value=float(latest_rate_val),
+                step=0.5,
+                format="%.2f",
+                key="trip_plan_rate",
+                help="Auto-filled with your most recent fuel rate. Adjust if fuel prices differ along your route.",
+            )
+            plan_kml = st.number_input(
+                "Expected Mileage (km/L)",
+                min_value=5.0,
+                max_value=100.0,
+                value=float(auto_kml_val),
+                step=0.5,
+                format="%.1f",
+                key="trip_plan_kml",
+                help="Auto-filled from your vehicle's actual average mileage. Increase for highway cruising, decrease for stop-and-go traffic.",
+            )
+
+        with st.expander("➕ Additional Journey Costs (Tolls, Parking & Buffer)", expanded=False):
+            e_c1, e_c2 = st.columns(2)
+            with e_c1:
+                plan_tolls = st.number_input(
+                    "Estimated Fastag / Tolls (₹)",
+                    min_value=0.0,
+                    step=50.0,
+                    value=0.0,
+                    key="trip_plan_tolls",
+                )
+            with e_c2:
+                plan_misc = st.number_input(
+                    "Parking / Snacks / Buffer (₹)",
+                    min_value=0.0,
+                    step=100.0,
+                    value=0.0,
+                    key="trip_plan_misc",
+                )
+
+    # Computations
+    effective_dist = plan_dist * 2.0 if is_round else plan_dist
+    fuel_needed = round(effective_dist / plan_kml, 2) if plan_kml > 0 else 0.0
+    fuel_cost = round(fuel_needed * plan_rate, 2)
+    running_cost_per_km = round(fuel_cost / effective_dist, 2) if effective_dist > 0 else 0.0
+    total_budget = fuel_cost + plan_tolls + plan_misc
+
+    # Results Section
+    st.write("")
+    st.markdown("##### 📊 Estimated Journey Budget & Breakdown")
+    kpi_c1, kpi_c2, kpi_c3, kpi_c4 = st.columns(4)
+    with kpi_c1:
+        render_kpi("Total Distance", f"{fmt_number(effective_dist, 0)} km", "Round Trip" if is_round else "One-way", badge_text="Route", badge_type="blue")
+    with kpi_c2:
+        render_kpi("Fuel Required", f"{fuel_needed:.1f} L", f"@{plan_kml:.1f} km/L", badge_text="Volume", badge_type="purple")
+    with kpi_c3:
+        render_kpi("Fuel Budget", fmt_currency(fuel_cost), f"@{fmt_currency(plan_rate)}/L", badge_text="Fuel", badge_type="green")
+    with kpi_c4:
+        render_kpi("Total Journey Cost", fmt_currency(total_budget), f"₹{running_cost_per_km:.2f} / km", badge_text="Total", badge_type="amber")
+
+    # Smart Range & Refueling Advice
+    st.write("")
+    tank_est = 12.0 if ("bike" in v_type.lower() or "scooter" in v_type.lower() or "motorcycle" in v_type.lower()) else 45.0
+    full_range = round(tank_est * plan_kml, 0)
+    stops_needed = int(effective_dist // full_range)
+
+    if effective_dist <= full_range:
+        range_card_html = f"""
+        <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; gap: 14px;">
+            <span style="font-size: 1.8rem;">🎉</span>
+            <div>
+                <div style="font-weight: 700; color: #166534; font-size: 0.98rem;">Single Tank Journey — No Mid-way Refuel Required!</div>
+                <div style="font-size: 0.86rem; color: #15803D; margin-top: 3px;">
+                    Your <b>{escape_html(selected_vehicle_name)}</b> has an estimated range of <b>~{int(full_range)} km</b> on a full tank ({tank_est:.0f}L capacity). This {fmt_number(effective_dist, 0)} km trip fits comfortably within a single tank.
+                </div>
+            </div>
+        </div>
+        """
+    else:
+        range_card_html = f"""
+        <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; gap: 14px;">
+            <span style="font-size: 1.8rem;">⛽</span>
+            <div>
+                <div style="font-weight: 700; color: #92400E; font-size: 0.98rem;">Refuel Stop Planned: Minimum {stops_needed} Pump Stop(s) Required</div>
+                <div style="font-size: 0.86rem; color: #B45309; margin-top: 3px;">
+                    Estimated range on a full tank is <b>~{int(full_range)} km</b> ({tank_est:.0f}L capacity). For a {fmt_number(effective_dist, 0)} km journey, plan for at least <b>{stops_needed} refueling stop(s)</b> along the route.
+                </div>
+            </div>
+        </div>
+        """
+    st.markdown(range_card_html, unsafe_allow_html=True)
+
+    # Multi-vehicle Comparison (if garage has multiple vehicles)
+    if len(vehicles) > 1:
+        st.write("")
+        st.markdown("##### 🚗 Compare Fleet Vehicles for this Journey")
+        comp_rows = []
+        for v_item in vehicles:
+            v_id_i = v_item["vehicle_id"]
+            v_name_i = v_item["vehicle_name"]
+            v_type_i = v_item.get("vehicle_type", "Car")
+            df_f_i = get_records_by_vehicle(TAB_FUEL, v_id_i)
+            r_rate_i, r_kml_i = _get_vehicle_fuel_metrics(df_f_i)
+            f_need_i = round(effective_dist / r_kml_i, 1) if r_kml_i > 0 else 0.0
+            f_cost_i = round(f_need_i * r_rate_i, 2)
+            c_per_km_i = round(f_cost_i / effective_dist, 2) if effective_dist > 0 else 0.0
+            comp_rows.append({
+                "Vehicle": v_name_i,
+                "Type": v_type_i,
+                "Avg Mileage": f"{r_kml_i:.1f} km/L",
+                "Fuel Needed": f"{f_need_i:.1f} L",
+                "Fuel Cost": fmt_currency(f_cost_i),
+                "Cost / km": f"₹{c_per_km_i:.2f}/km",
+            })
+        st.dataframe(pd.DataFrame(comp_rows), use_container_width=True, hide_index=True)
+
 
 
