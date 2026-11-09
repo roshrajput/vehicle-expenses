@@ -24,8 +24,8 @@ from utils.constants import (
     CURRENCY,
     APP_VERSION,
 )
-from utils.helpers import generate_id, now_ist, fmt_currency, fmt_number
-from utils.ui import apply_custom_css, render_empty_state, render_vehicle_badge, render_app_footer
+from utils.helpers import generate_id, now_ist, fmt_currency, fmt_number, parse_date
+from utils.ui import apply_custom_css, render_empty_state, render_vehicle_badge, render_app_footer, render_expiry_badge
 
 # ---------- Apply SaaS Theme ----------
 apply_custom_css()
@@ -89,10 +89,12 @@ if st.session_state.show_add_vehicle:
             make = st.text_input("Brand / Make", placeholder='e.g. Maruti Suzuki, Hyundai, Honda')
             year = st.number_input("Manufacturing Year", min_value=1990, max_value=2030, value=2024, step=1)
             fuel_type = st.selectbox("Primary Fuel Type", FUEL_TYPES)
+            insurance_exp = st.date_input("🛡️ Insurance Expiry (optional)", value=None, help="Renewal date for auto-alerts")
         with col2:
             vehicle_type = st.selectbox("Vehicle Category", VEHICLE_TYPES)
             model = st.text_input("Model Variant", placeholder='e.g. Swift VXi, City ZX, Activa 6G')
             registration_no = st.text_input("Registration Plate Number", placeholder='e.g. MH-12-AB-1234')
+            pucc_exp = st.date_input("🍃 PUCC (Pollution) Expiry (optional)", value=None, help="Validity date for pollution check")
 
         st.write("")
         submit_add = st.form_submit_button("💾 Save Vehicle to Garage", use_container_width=True, type="primary")
@@ -111,6 +113,8 @@ if st.session_state.show_add_vehicle:
                     "year": str(int(year)),
                     "registration_no": registration_no.strip().upper(),
                     "fuel_type": fuel_type,
+                    "insurance_expiry": str(insurance_exp) if insurance_exp else "",
+                    "pucc_expiry": str(pucc_exp) if pucc_exp else "",
                     "is_deleted": "FALSE",
                     "created_at": now_ist(),
                     "updated_at": "",
@@ -189,12 +193,16 @@ else:
                     fuel_val = ev.get("fuel_type", FUEL_TYPES[0])
                     fuel_idx = FUEL_TYPES.index(fuel_val) if fuel_val in FUEL_TYPES else 0
                     edit_fuel = st.selectbox("Fuel Type", FUEL_TYPES, index=fuel_idx)
+                    edit_ins_val = parse_date(ev.get("insurance_expiry"))
+                    edit_ins = st.date_input("🛡️ Insurance Expiry (optional)", value=edit_ins_val, key=f"e_ins_{ev.get('vehicle_id')}")
                 with ec2:
                     type_val = ev.get("vehicle_type", VEHICLE_TYPES[0])
                     type_idx = VEHICLE_TYPES.index(type_val) if type_val in VEHICLE_TYPES else 0
                     edit_type = st.selectbox("Vehicle Category", VEHICLE_TYPES, index=type_idx)
                     edit_model = st.text_input("Model Variant", value=ev.get("model", ""))
                     edit_reg = st.text_input("Registration Plate Number", value=ev.get("registration_no", ""))
+                    edit_pucc_val = parse_date(ev.get("pucc_expiry"))
+                    edit_pucc = st.date_input("🍃 PUCC Expiry (optional)", value=edit_pucc_val, key=f"e_pucc_{ev.get('vehicle_id')}")
 
                 btn_col1, btn_col2 = st.columns(2)
                 with btn_col1:
@@ -214,6 +222,8 @@ else:
                             "year": str(int(edit_year)),
                             "registration_no": edit_reg.strip().upper(),
                             "fuel_type": edit_fuel,
+                            "insurance_expiry": str(edit_ins) if edit_ins else "",
+                            "pucc_expiry": str(edit_pucc) if edit_pucc else "",
                             "updated_at": now_ist(),
                         }
                         update_record(TAB_VEHICLES, "vehicle_id", ev["vehicle_id"], updates)
@@ -291,13 +301,23 @@ else:
                 )
 
                 # Badges row
+                ins_badge = render_expiry_badge("Insurance", v.get("insurance_expiry"))
+                pucc_badge = render_expiry_badge("PUCC", v.get("pucc_expiry"))
+                doc_badges_html = f"""
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px;">
+                    {ins_badge}
+                    {pucc_badge}
+                </div>
+                """ if (ins_badge or pucc_badge) else ""
+
                 st.markdown(
                     f"""
-                    <div style="display: flex; gap: 6px; margin-bottom: 16px;">
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
                         <span class="badge badge-blue">⛽ {v_fuel}</span>
                         <span class="badge badge-slate">🏷️ {v_type}</span>
                         <span class="badge badge-green">🛣️ {fmt_number(v_max_odo, 0) if v_max_odo > 0 else '0'} km ODO</span>
                     </div>
+                    {doc_badges_html}
                     """,
                     unsafe_allow_html=True,
                 )

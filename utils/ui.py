@@ -120,6 +120,7 @@ h3 {
 .badge-green { background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; }
 .badge-purple { background: #FAF5FF; color: #7E22CE; border: 1px solid #E9D5FF; }
 .badge-slate { background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; }
+.badge-red { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
 
 /* Prominent Version Indicator Pill */
 .version-pill {
@@ -396,9 +397,17 @@ div[data-testid="stMetricValue"] {
 """
 
 
+PWA_META = """
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="AutoExpense OS">
+<meta name="theme-color" content="#2563EB">
+"""
+
+
 def apply_custom_css():
-    """Inject custom SaaS theme styling with mobile & tablet responsiveness."""
-    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+    """Inject custom SaaS theme styling with mobile & tablet responsiveness and PWA tags."""
+    st.markdown(PWA_META + CUSTOM_CSS, unsafe_allow_html=True)
 
 
 def render_kpi(title: str, value: str, sub: str = "", badge_text: str = "", badge_type: str = "blue"):
@@ -457,3 +466,24 @@ def render_app_footer():
         """,
         unsafe_allow_html=True,
     )
+
+
+def render_expiry_badge(label: str, expiry_val) -> str:
+    """Render a traffic-light badge for Insurance or PUCC validity countdown."""
+    if not expiry_val or str(expiry_val).strip() == "":
+        return ""
+    from datetime import date, datetime
+    from utils.helpers import parse_date, today_date
+    exp_date = parse_date(expiry_val)
+    if not exp_date:
+        return ""
+    t_date = today_date()
+    days_left = (exp_date - t_date).days
+    date_formatted = exp_date.strftime("%d %b %Y")
+
+    if days_left < 0:
+        return f'<span class="badge badge-red">🚨 {label}: Expired {abs(days_left)}d ago ({date_formatted})</span>'
+    elif days_left <= 30:
+        return f'<span class="badge badge-amber">⚠️ {label}: Renews in {days_left}d ({date_formatted})</span>'
+    else:
+        return f'<span class="badge badge-green">🛡️ {label}: Valid ({days_left}d left)</span>'

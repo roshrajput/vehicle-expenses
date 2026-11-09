@@ -14,7 +14,7 @@ from utils.auth import require_auth, get_current_user
 from utils.sheets import get_records_by_user, clear_sheet_cache
 from utils.constants import TAB_VEHICLES, TAB_FUEL, TAB_SERVICE, TAB_MISC, CURRENCY, APP_VERSION
 from utils.helpers import fmt_currency, fmt_number
-from utils.ui import apply_custom_css, render_empty_state, render_kpi, render_app_footer
+from utils.ui import apply_custom_css, render_empty_state, render_kpi, render_app_footer, render_expiry_badge
 
 # ── Apply SaaS Theme ────────────────────────────────────────────────────────
 apply_custom_css()
@@ -302,6 +302,32 @@ if not service_df.empty and "odo_reading_km" in service_df.columns:
             next_service_display = f"⚠️ Overdue {fmt_number(abs(soonest), 0)} km"
             service_badge_type = "amber"
 
+# ── Document Renewal Alerts (Insurance & PUCC) ───────────────────────────────
+doc_alerts = []
+if not vehicles_df.empty:
+    for _, v in vehicles_df.iterrows():
+        vname = v.get("vehicle_name", "Vehicle")
+        ins_b = render_expiry_badge(f"{vname} Insurance", v.get("insurance_expiry"))
+        if ins_b and ("🚨" in ins_b or "⚠️" in ins_b):
+            doc_alerts.append(ins_b)
+        pucc_b = render_expiry_badge(f"{vname} PUCC", v.get("pucc_expiry"))
+        if pucc_b and ("🚨" in pucc_b or "⚠️" in pucc_b):
+            doc_alerts.append(pucc_b)
+
+if doc_alerts:
+    st.markdown(
+        f"""
+        <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px; padding: 12px 18px; margin-bottom: 20px;">
+            <div style="font-weight: 700; color: #92400E; font-size: 0.88rem; margin-bottom: 8px;">
+                🔔 Vehicle Documents Requiring Attention:
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                {' '.join(doc_alerts)}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  MODERN KPI CARDS ROW

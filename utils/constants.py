@@ -6,8 +6,26 @@ Constants and configuration for the Vehicle Expense Tracker.
 # Application Metadata
 # ---------------------------------------------------------------------------
 APP_NAME = "AutoExpense OS"
-APP_VERSION = "v1.1.0"
+APP_BASE_VERSION = "v1.1.0"
 APP_RELEASE_DATE = "November 2026"
+
+
+def _resolve_app_version() -> str:
+    """Dynamically determine version string with git short hash if available."""
+    try:
+        import subprocess
+        sha = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL
+        ).decode("utf-8").strip()
+        if sha:
+            return f"{APP_BASE_VERSION} ({sha})"
+    except Exception:
+        pass
+    return APP_BASE_VERSION
+
+
+APP_VERSION = _resolve_app_version()
 
 # ---------------------------------------------------------------------------
 # Google Sheet
@@ -32,6 +50,7 @@ USERS_COLUMNS = [
 VEHICLES_COLUMNS = [
     "vehicle_id", "user_id", "vehicle_name", "vehicle_type", "make",
     "model", "year", "registration_no", "fuel_type",
+    "insurance_expiry", "pucc_expiry",
     "created_at", "is_deleted", "updated_at",
 ]
 
