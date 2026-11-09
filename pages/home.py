@@ -24,7 +24,7 @@ from utils.constants import (
     CURRENCY,
     APP_VERSION,
 )
-from utils.helpers import generate_id, now_ist, fmt_currency, fmt_number, parse_date
+from utils.helpers import generate_id, now_ist, fmt_currency, fmt_number, parse_date, escape_html
 from utils.ui import apply_custom_css, render_empty_state, render_vehicle_badge, render_app_footer, render_expiry_badge
 
 # ---------- Apply SaaS Theme ----------
@@ -41,7 +41,7 @@ st.markdown(
     f"""
     <div class="welcome-banner">
         <div class="welcome-eyebrow">Garage & Fleet Overview</div>
-        <div class="welcome-title">Welcome, {display_name}! 👋</div>
+        <div class="welcome-title">Welcome, {escape_html(display_name)}! 👋</div>
         <div class="welcome-sub">Manage your registered vehicles, log expenses, and monitor fuel efficiency.</div>
     </div>
     """,
@@ -287,8 +287,8 @@ else:
                                 {emoji}
                             </div>
                             <div>
-                                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #0F172A;">{v_name}</h3>
-                                <div style="font-size: 0.85rem; color: #64748B; margin-top: 2px;">{spec_str if spec_str else v_type}</div>
+                                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #0F172A;">{escape_html(v_name)}</h3>
+                                <div style="font-size: 0.85rem; color: #64748B; margin-top: 2px;">{escape_html(spec_str if spec_str else v_type)}</div>
                             </div>
                         </div>
                         {badge_plate_html}

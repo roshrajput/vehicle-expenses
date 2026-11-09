@@ -26,7 +26,7 @@ from utils.constants import (
     CURRENCY,
     APP_VERSION,
 )
-from utils.helpers import generate_id, now_ist, today_date, fmt_currency, parse_date, fmt_number
+from utils.helpers import generate_id, now_ist, today_date, fmt_currency, parse_date, fmt_number, escape_html
 from utils.ui import apply_custom_css, render_empty_state, render_vehicle_badge, render_app_footer
 
 # ── Apply Styling ────────────────────────────────────────────────────────────
@@ -92,7 +92,7 @@ with top_v_col1:
             </div>
             <div>
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <h2 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #0F172A;">{selected_vehicle_name}</h2>
+                    <h2 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #0F172A;">{escape_html(selected_vehicle_name)}</h2>
                     {plate_html}
                 </div>
                 <div style="font-size: 0.85rem; color: #64748B; margin-top: 2px;">
@@ -622,7 +622,7 @@ with fuel_tab:
                                 <div style="font-size: 0.88rem; color: #475569; margin-top: 5px;">
                                     <b>{qty_val:.2f} L</b> filled @ {fmt_currency(rate_val)}/L &nbsp;·&nbsp; ODO: <b>{odo_label}</b>{dist_sub}
                                 </div>
-                                {f'<div style="font-size: 0.82rem; color: #64748B; margin-top: 3px;">💬 {comment}</div>' if comment else ''}
+                                {f'<div style="font-size: 0.82rem; color: #64748B; margin-top: 3px;">💬 {escape_html(comment)}</div>' if comment else ''}
                             </div>
                             <div style="text-align: right; white-space: nowrap;">
                                 <div style="font-size: 1.25rem; font-weight: 800; color: #2563EB;">{fmt_currency(total_val)}</div>
@@ -805,12 +805,12 @@ with service_tab:
                     <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
                         <div>
                             <span style="font-weight: 700; color: #0F172A; font-size: 1.05rem;">{row.get('date', '')}</span>
-                            &nbsp; <span class="badge badge-amber">🔧 {row.get('service_type', '')}</span>
+                            &nbsp; <span class="badge badge-amber">🔧 {escape_html(row.get('service_type', ''))}</span>
                             <div style="font-size: 0.88rem; color: #475569; margin-top: 4px;">
                                 ODO at service: <b>{fmt_number(odo_val, 1)} km</b>
                             </div>
-                            {f'<div style="font-size: 0.82rem; color: #64748B; margin-top: 3px;">🔩 <b>Parts:</b> {parts}</div>' if parts else ''}
-                            {f'<div style="font-size: 0.82rem; color: #64748B; margin-top: 2px;">💬 {comment}</div>' if comment else ''}
+                            {f'<div style="font-size: 0.82rem; color: #64748B; margin-top: 3px;">🔩 <b>Parts:</b> {escape_html(parts)}</div>' if parts else ''}
+                            {f'<div style="font-size: 0.82rem; color: #64748B; margin-top: 2px;">💬 {escape_html(comment)}</div>' if comment else ''}
                         </div>
                         <div style="text-align: right; white-space: nowrap;">
                             <div style="font-size: 1.25rem; font-weight: 800; color: #D97706;">{fmt_currency(cost_val)}</div>
@@ -967,8 +967,8 @@ with misc_tab:
                     <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
                         <div>
                             <span style="font-weight: 700; color: #0F172A; font-size: 1.05rem;">{row.get('date', '')}</span>
-                            &nbsp; <span class="badge badge-green">📦 {row.get('category', '')}</span>
-                            {f'<div style="font-size: 0.88rem; color: #475569; margin-top: 4px;">💬 {comment}</div>' if comment else ''}
+                            &nbsp; <span class="badge badge-green">📦 {escape_html(row.get('category', ''))}</span>
+                            {f'<div style="font-size: 0.88rem; color: #475569; margin-top: 4px;">💬 {escape_html(comment)}</div>' if comment else ''}
                         </div>
                         <div style="text-align: right; white-space: nowrap;">
                             <div style="font-size: 1.25rem; font-weight: 800; color: #059669;">{fmt_currency(amt_val)}</div>

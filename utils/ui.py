@@ -6,7 +6,7 @@ Fully optimized for mobile (iPhone 12 mini, 12 Pro Max, Pixel) and tablet (iPad 
 
 import streamlit as st
 from utils.constants import CURRENCY
-from utils.helpers import fmt_currency, fmt_number
+from utils.helpers import fmt_currency, fmt_number, escape_html
 
 # ---------------------------------------------------------------------------
 # Global CSS Design System — Mobile & Tablet Responsive
@@ -425,7 +425,7 @@ def render_vehicle_badge(reg_no: str):
     """Render an authentic registration number badge."""
     if not reg_no:
         return ""
-    return f'<span class="reg-plate">IND {reg_no.upper()}</span>'
+    return f'<span class="reg-plate">IND {escape_html(reg_no.upper())}</span>'
 
 
 def render_empty_state(icon: str, title: str, description: str):
@@ -434,8 +434,8 @@ def render_empty_state(icon: str, title: str, description: str):
         f"""
         <div style="text-align: center; padding: 36px 18px; background: #FFFFFF; border: 1.5px dashed #CBD5E1; border-radius: 16px; margin: 16px 0;">
             <div style="font-size: 2.6rem; margin-bottom: 10px;">{icon}</div>
-            <h3 style="margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 700; color: #1E293B;">{title}</h3>
-            <p style="margin: 0 auto; max-width: 440px; font-size: 0.88rem; color: #64748B; line-height: 1.5;">{description}</p>
+            <h3 style="margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 700; color: #1E293B;">{escape_html(title)}</h3>
+            <p style="margin: 0 auto; max-width: 440px; font-size: 0.88rem; color: #64748B; line-height: 1.5;">{escape_html(description)}</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -465,9 +465,10 @@ def render_expiry_badge(label: str, expiry_val) -> str:
     days_left = (exp_date - t_date).days
     date_formatted = exp_date.strftime("%d %b %Y")
 
+    label_safe = escape_html(label)
     if days_left < 0:
-        return f'<span class="badge badge-red">🚨 {label}: Expired {abs(days_left)}d ago ({date_formatted})</span>'
+        return f'<span class="badge badge-red">🚨 {label_safe}: Expired {abs(days_left)}d ago ({date_formatted})</span>'
     elif days_left <= 30:
-        return f'<span class="badge badge-amber">⚠️ {label}: Renews in {days_left}d ({date_formatted})</span>'
+        return f'<span class="badge badge-amber">⚠️ {label_safe}: Renews in {days_left}d ({date_formatted})</span>'
     else:
-        return f'<span class="badge badge-green">🛡️ {label}: Valid ({days_left}d left)</span>'
+        return f'<span class="badge badge-green">🛡️ {label_safe}: Valid ({days_left}d left)</span>'

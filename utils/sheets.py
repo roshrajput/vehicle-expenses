@@ -14,6 +14,7 @@ from utils.constants import (
     SHEET_ID, TAB_COLUMNS,
     TAB_USERS, TAB_VEHICLES, TAB_FUEL, TAB_SERVICE, TAB_MISC,
 )
+from utils.helpers import sanitize_formula
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -169,7 +170,7 @@ def append_record(tab_name: str, data_dict: dict):
     if not headers:
         headers = TAB_COLUMNS.get(tab_name, [])
         ws.update([headers], "A1")
-    row = [str(data_dict.get(h, "")) for h in headers]
+    row = [sanitize_formula(data_dict.get(h, "")) for h in headers]
     ws.append_row(row, value_input_option="USER_ENTERED")
     clear_sheet_cache()
 
@@ -206,7 +207,7 @@ def update_record(tab_name: str, id_column: str, record_id: str,
     for key, value in updates.items():
         if key in headers:
             col_idx = headers.index(key) + 1
-            cells.append(gspread.Cell(row_idx, col_idx, str(value)))
+            cells.append(gspread.Cell(row_idx, col_idx, sanitize_formula(value)))
 
     if cells:
         ws.update_cells(cells, value_input_option="USER_ENTERED")

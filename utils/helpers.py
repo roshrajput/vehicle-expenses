@@ -3,6 +3,7 @@ Utility / helper functions.
 """
 
 import uuid
+import html
 from datetime import datetime, date
 
 from utils.constants import CURRENCY, DATE_FORMAT, DATETIME_FORMAT
@@ -54,3 +55,34 @@ def fmt_number(value, decimals: int = 1) -> str:
         return f"{float(value):,.{decimals}f}"
     except (ValueError, TypeError):
         return "0"
+
+
+# ---------------------------------------------------------------------------
+# Security & Sanitization
+# ---------------------------------------------------------------------------
+def escape_html(val) -> str:
+    """Safely escape user-supplied strings for HTML rendering (XSS prevention)."""
+    if val is None:
+        return ""
+    return html.escape(str(val), quote=True)
+
+
+def sanitize_formula(val) -> str:
+    """Neutralize spreadsheet formula injection (CSV injection).
+
+    If text starts with formula triggers (=, +, -, @, \\t, \\r),
+    and is not a valid number, prefixes with a single quote (')
+    so Google Sheets stores and renders it as plain literal text.
+    """
+    if val is None:
+        return ""
+    s = str(val)
+    if not s:
+        return ""
+    if s[0] in ("=", "+", "-", "@", "\t", "\r"):
+        try:
+            float(s)
+            return s
+        except ValueError:
+            return f"'{s}"
+    return s
