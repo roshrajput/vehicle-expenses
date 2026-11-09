@@ -1,47 +1,115 @@
 """
-Authentication helpers — login, register, session guard.
+Authentication helpers — login, register, session guard, and password security.
 """
 
+import hashlib
+import secrets
 import streamlit as st
 
-from utils.sheets import get_all_records, append_record
+from utils.sheets import get_all_records, append_record, update_record
 from utils.constants import TAB_USERS
 from utils.helpers import generate_id, now_ist
 
 
+def hash_password(password: str, salt: str | None = None) -> str:
+    """Hash a password using PBKDF2-HMAC-SHA256 with a cryptographically secure salt."""
+    if not salt:
+        salt = secrets.token_hex(16)
+    dk = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt.encode("utf-8"),
+        100000,
+    )
+    return f"pbkdf2:sha256:100000${salt}${dk.hex()}"
+
+
+def verify_password(plain_password: str, stored_hash: str) -> bool:
+    """
+    Verify a password against stored PBKDF2 hash, or legacy plaintext.
+    Maintains 100% backward compatibility for existing users without disruption.
+    """
+    if not stored_hash:
+        return False
+
+    stored_str = str(stored_hash).strip()
+    if stored_str.startswith("pbkdf2:sha256:"):
+        try:
+            parts = stored_str.split("$")
+            if len(parts) == 3:
+                salt = parts[1]
+                expected_dk = parts[2]
+                computed_dk = hashlib.pbkdf2_hmac(
+                    "sha256",
+                    plain_password.encode("utf-8"),
+                    salt.encode("utf-8"),
+                    100000,
+                ).hex()
+                return secrets.compare_digest(computed_dk, expected_dk)
+        except Exception:
+            return False
+
+    # Backward-compatible fallback for legacy plaintext passwords
+    return secrets.compare_digest(plain_password, stored_str)
+
+
 def authenticate(username: str, password: str) -> dict | None:
-    """Return the user dict if credentials match, else None."""
+    """
+    Return the user dict if credentials match, else None.
+    Automatically upgrades legacy plaintext passwords to PBKDF2 hashes in Google Sheets.
+    Strips raw/hashed password from the returned dictionary to secure session state.
+    """
     df = get_all_records(TAB_USERS)
     if df.empty:
         return None
-    match = df[
-        (df["username"].astype(str) == username)
-        & (df["password"].astype(str) == password)
-    ]
-    if match.empty:
+
+    clean_user = username.strip().lower()
+    user_match = df[df["username"].astype(str).str.strip().str.lower() == clean_user]
+    if user_match.empty:
         return None
-    return match.iloc[0].to_dict()
+
+    user_row = user_match.iloc[0]
+    stored_pw = str(user_row.get("password", "")).strip()
+
+    if not verify_password(password, stored_pw):
+        return None
+
+    # Seamless migration: if stored password is still plaintext, upgrade to secure hash now
+    if not stored_pw.startswith("pbkdf2:sha256:"):
+        try:
+            new_hash = hash_password(password)
+            user_id = str(user_row["user_id"])
+            update_record(TAB_USERS, "user_id", user_id, {"password": new_hash})
+        except Exception:
+            pass  # Non-blocking if sheet update fails
+
+    user_dict = user_row.to_dict()
+    user_dict.pop("password", None)  # Never expose password in session state
+    return user_dict
 
 
 def register_user(username: str, password: str,
                   display_name: str, email: str = "") -> tuple:
-    """Create a new user. Returns (user_dict, message)."""
+    """Create a new user with hashed password. Returns (user_dict, message)."""
     df = get_all_records(TAB_USERS)
-    if not df.empty and username in df["username"].astype(str).values:
+    clean_user = username.strip()
+    if not df.empty and clean_user.lower() in df["username"].astype(str).str.strip().str.lower().values:
         return None, "Username already exists!"
 
+    hashed_pw = hash_password(password)
     user_data = {
         "user_id": generate_id(),
-        "username": username,
-        "password": password,
-        "display_name": display_name,
-        "email": email,
+        "username": clean_user,
+        "password": hashed_pw,
+        "display_name": display_name.strip(),
+        "email": email.strip(),
         "created_at": now_ist(),
         "is_deleted": "FALSE",
         "updated_at": "",
     }
     append_record(TAB_USERS, user_data)
-    return user_data, "Registration successful! You can now log in."
+    safe_user = {k: v for k, v in user_data.items() if k != "password"}
+    return safe_user, "Registration successful! You can now log in."
 
 
 def require_auth():
