@@ -83,7 +83,7 @@ with st.container(border=True):
 
     with fc2:
         today = date.today()
-        start_default = today - timedelta(days=365)
+        start_default = date(2025, 1, 1)
         date_range = st.date_input(
             "📅 Date Range Filter",
             value=(start_default, today),
@@ -110,7 +110,7 @@ selected_vehicle_id = (
 if isinstance(date_range, (list, tuple)) and len(date_range) == 2:
     start_date, end_date = date_range
 else:
-    start_date = date_range[0] if isinstance(date_range, (list, tuple)) and len(date_range) > 0 else today - timedelta(days=365)
+    start_date = date_range[0] if isinstance(date_range, (list, tuple)) and len(date_range) > 0 else date(2025, 1, 1)
     end_date = today
 
 st.write("")
