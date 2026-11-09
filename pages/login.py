@@ -22,9 +22,9 @@ st.markdown(
         <div style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; background: linear-gradient(135deg, #2563EB, #1D4ED8); border-radius: 18px; box-shadow: 0 10px 20px -5px rgba(37,99,235,0.4); margin-bottom: 16px;">
             <span style="font-size: 2rem;">🚗</span>
         </div>
-        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
             <h1 style="margin: 0; font-size: 2.2rem; font-weight: 800; color: #0F172A; letter-spacing: -0.03em;">{APP_NAME}</h1>
-            <span class="badge badge-blue" style="font-size: 0.82rem; font-weight: 800; padding: 4px 9px; border-radius: 9999px;">{APP_VERSION}</span>
+            <span class="version-pill" style="font-size: 0.88rem; padding: 4px 12px;">🚀 {APP_VERSION}</span>
         </div>
         <p style="margin: 8px auto 0 auto; max-width: 480px; font-size: 1rem; color: #64748B; line-height: 1.5;">
             Track fuel efficiency, maintenance bills, and vehicle expenses seamlessly backed by Google Sheets.

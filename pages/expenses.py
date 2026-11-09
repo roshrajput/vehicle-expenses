@@ -91,10 +91,10 @@ with top_v_col1:
                 ⛽
             </div>
             <div>
-                <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <h2 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #0F172A;">{selected_vehicle_name}</h2>
                     {plate_html}
-                    <span class="badge badge-slate" style="font-size: 0.72rem; font-weight: 700;">{APP_VERSION}</span>
+                    <span class="version-pill">🚀 {APP_VERSION}</span>
                 </div>
                 <div style="font-size: 0.85rem; color: #64748B; margin-top: 2px;">
                     Category: <b>{v_type}</b> &nbsp;|&nbsp; Primary Fuel: <b>{v_fuel}</b>

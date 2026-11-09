@@ -121,6 +121,23 @@ h3 {
 .badge-purple { background: #FAF5FF; color: #7E22CE; border: 1px solid #E9D5FF; }
 .badge-slate { background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; }
 
+/* Prominent Version Indicator Pill */
+.version-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #EFF6FF;
+    color: #1D4ED8;
+    border: 1px solid #BFDBFE;
+    border-radius: 9999px;
+    padding: 3px 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+}
+
 /* Responsive KPI Card System */
 .kpi-container {
     background: #FFFFFF;
@@ -423,10 +440,10 @@ def render_empty_state(icon: str, title: str, description: str):
     )
 
 
-def render_version_badge():
-    """Return an HTML snippet for a sleek version pill badge."""
+def render_version_badge(extra_style: str = ""):
+    """Return an HTML snippet for a prominent version pill badge."""
     from utils.constants import APP_VERSION
-    return f'<span class="badge badge-blue" style="font-size: 0.74rem; font-weight: 700; padding: 2px 7px; border-radius: 9999px;">{APP_VERSION}</span>'
+    return f'<span class="version-pill" style="{extra_style}">🚀 {APP_VERSION}</span>'
 
 
 def render_app_footer():

@@ -40,9 +40,9 @@ display_name = user.get("display_name", "User")
 st.markdown(
     f"""
     <div class="welcome-banner">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
             <div class="welcome-eyebrow">Garage & Fleet Overview</div>
-            <span class="badge badge-slate" style="font-size: 0.72rem; font-weight: 700;">{APP_VERSION}</span>
+            <span class="version-pill">🚀 {APP_VERSION}</span>
         </div>
         <div class="welcome-title">Welcome, {display_name}! 👋</div>
         <div class="welcome-sub">Manage your registered vehicles, log expenses, and monitor fuel efficiency.</div>

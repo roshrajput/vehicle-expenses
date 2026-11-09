@@ -136,7 +136,7 @@ with st.sidebar:
                     <div style="font-size: 0.72rem; color: #64748B;">Expense & Mileage OS</div>
                 </div>
             </div>
-            <span class="badge badge-blue" style="font-weight: 800; font-size: 0.74rem; padding: 3px 8px; border-radius: 9999px;">{APP_VERSION}</span>
+            <span class="version-pill">🚀 {APP_VERSION}</span>
         </div>
         """,
         unsafe_allow_html=True,

@@ -30,9 +30,9 @@ with dash_h1:
     st.markdown(
         f"""
         <div style="margin-bottom: 18px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                 <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: #2563EB; font-weight: 700;">Executive Insights</div>
-                <span class="badge badge-slate" style="font-size: 0.72rem; font-weight: 700;">{APP_VERSION}</span>
+                <span class="version-pill">🚀 {APP_VERSION}</span>
             </div>
             <h1 style="margin: 0; font-size: 2rem; font-weight: 800; color: #0F172A; letter-spacing: -0.03em;">Vehicle Analytics & KPIs</h1>
             <p style="margin: 4px 0 0 0; font-size: 0.95rem; color: #64748B;">Comprehensive financial tracking, fuel consumption metrics, and maintenance schedules.</p>
