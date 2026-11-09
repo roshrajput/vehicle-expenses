@@ -6,7 +6,7 @@ Constants and configuration for the Vehicle Expense Tracker.
 # Application Metadata
 # ---------------------------------------------------------------------------
 APP_NAME = "AutoExpense OS"
-APP_VERSION = "v1.1.0"
+APP_VERSION = "v1.2.0"
 APP_RELEASE_DATE = "November 2026"
 
 

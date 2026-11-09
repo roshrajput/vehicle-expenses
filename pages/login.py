@@ -110,9 +110,10 @@ with main_col:
 
     # Trust note
     st.markdown(
-        """
+        f"""
         <div style="text-align: center; margin-top: 24px; font-size: 0.8rem; color: #94A3B8;">
             🔒 All expense logs and vehicle data are safely stored in your private Google Spreadsheet.
+            <div style="margin-top: 6px; font-size: 0.75rem; color: #94A3B8;">{APP_NAME} {APP_VERSION}</div>
         </div>
         """,
         unsafe_allow_html=True,
