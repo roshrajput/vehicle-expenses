@@ -27,6 +27,22 @@ from utils.constants import (
 from utils.helpers import generate_id, now_ist, fmt_currency, fmt_number, parse_date, escape_html
 from utils.ui import apply_custom_css, render_empty_state, render_vehicle_badge, render_app_footer, render_expiry_badge
 
+# ---------- Delete Confirmation Modal ----------
+@st.dialog("Delete Vehicle")
+def confirm_delete_vehicle_dialog(vid: str, v_name: str, reg_no: str):
+    st.write(f"Are you sure you want to delete **{escape_html(v_name)}** (`{escape_html(reg_no)}`)?")
+    st.caption("Historical expense and mileage records will remain safely archived in Google Sheets.")
+    st.write("")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("❌ Cancel", key=f"dlg_cancel_v_{vid}", use_container_width=True):
+            st.rerun()
+    with c2:
+        if st.button("🗑️ Yes, Delete", key=f"dlg_confirm_v_{vid}", type="primary", use_container_width=True):
+            soft_delete_record(TAB_VEHICLES, "vehicle_id", vid)
+            st.toast(f"🗑️ Vehicle '{v_name}' removed.")
+            st.rerun()
+
 # ---------- Apply SaaS Theme ----------
 apply_custom_css()
 
@@ -355,22 +371,6 @@ else:
                         st.rerun()
                 with sub_c2:
                     if st.button("🗑️ Delete", key=f"del_{vid}", use_container_width=True):
-                        st.session_state.confirm_delete_vehicle = vid
-                        st.rerun()
-
-                # Delete Confirmation Box
-                if st.session_state.confirm_delete_vehicle == vid:
-                    st.warning(f"Delete **{v_name}**? Historical records will stay safely archived in Google Sheets.")
-                    c_col1, c_col2 = st.columns(2)
-                    with c_col1:
-                        if st.button("✅ Confirm Delete", key=f"confirm_del_{vid}", use_container_width=True, type="primary"):
-                            soft_delete_record(TAB_VEHICLES, "vehicle_id", vid)
-                            st.session_state.confirm_delete_vehicle = None
-                            st.toast("🗑️ Vehicle removed.")
-                            st.rerun()
-                    with c_col2:
-                        if st.button("❌ Cancel", key=f"cancel_del_{vid}", use_container_width=True):
-                            st.session_state.confirm_delete_vehicle = None
-                            st.rerun()
+                        confirm_delete_vehicle_dialog(vid, v_name, reg_no)
 
 

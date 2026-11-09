@@ -3,6 +3,7 @@ Login / Register page for Vehicle Expense Tracker.
 Provides a modern, consumer-grade SaaS authentication UI.
 """
 
+import time
 import streamlit as st
 from utils.auth import authenticate, register_user
 from utils.constants import APP_NAME, APP_VERSION
@@ -53,6 +54,9 @@ with main_col:
         unsafe_allow_html=True,
     )
 
+    if st.session_state.get("session_timeout_msg"):
+        st.warning(st.session_state.pop("session_timeout_msg"))
+
     login_tab, register_tab = st.tabs(["🔐 Sign In", "✨ Create Account"])
 
     # ── Login Tab ────────────────────────────────────────────────────────────
@@ -75,6 +79,7 @@ with main_col:
                 user_dict = authenticate(username, password)
                 if user_dict:
                     st.session_state.user = user_dict
+                    st.session_state["last_activity_time"] = time.time()
                     st.success(f"Welcome back, {user_dict.get('display_name', username)}! Redirecting...")
                     st.rerun()
                 else:

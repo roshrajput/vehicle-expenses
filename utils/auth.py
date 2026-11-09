@@ -4,11 +4,15 @@ Authentication helpers — login, register, session guard, and password security
 
 import hashlib
 import secrets
+import time
 import streamlit as st
 
 from utils.sheets import get_all_records, append_record, update_record
 from utils.constants import TAB_USERS
 from utils.helpers import generate_id, now_ist
+
+# 10 minutes inactivity timeout
+INACTIVITY_TIMEOUT_SECONDS = 10 * 60
 
 
 def hash_password(password: str, salt: str | None = None) -> str:
@@ -112,14 +116,40 @@ def register_user(username: str, password: str,
     return safe_user, "Registration successful! You can now log in."
 
 
+def check_session_timeout() -> bool:
+    """Check if the user's active session has exceeded 10 minutes of inactivity.
+
+    If inactive > 10 min, clears session, sets timeout alert, and redirects to login.
+    Otherwise updates last_activity_time to the current timestamp.
+    """
+    if "user" not in st.session_state or st.session_state.user is None:
+        return True
+
+    now = time.time()
+    last_act = st.session_state.get("last_activity_time")
+
+    if last_act is not None and (now - last_act) > INACTIVITY_TIMEOUT_SECONDS:
+        logout()
+        st.session_state["session_timeout_msg"] = (
+            "⚠️ You were logged out due to 10 minutes of inactivity. Please sign in again."
+        )
+        st.switch_page("pages/login.py")
+        st.stop()
+        return False
+
+    st.session_state["last_activity_time"] = now
+    return True
+
+
 def require_auth():
     """Call at the top of every protected page.
 
-    Redirects to the login page if the user is not authenticated.
+    Enforces active authentication and 10-minute inactivity timeout.
     """
     if "user" not in st.session_state or st.session_state.user is None:
         st.switch_page("pages/login.py")
         st.stop()
+    check_session_timeout()
 
 
 def get_current_user() -> dict | None:

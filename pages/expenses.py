@@ -37,6 +37,78 @@ require_auth()
 user = get_current_user()
 user_id = user["user_id"]
 
+# ── Delete Confirmation Modals ───────────────────────────────────────────────
+@st.dialog("Delete Fuel Record")
+def confirm_delete_fuel_dialog(eid: str, date_str: str, liters: float, cost: float):
+    st.write("Are you sure you want to delete this fuel record?")
+    st.markdown(
+        f"""
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 14px; margin: 8px 0 16px 0; font-size: 0.9rem;">
+            📅 <b>Date:</b> {escape_html(date_str)} &nbsp;·&nbsp; ⛽ <b>Fuel:</b> {liters:.2f} L &nbsp;·&nbsp; 💰 <b>Amount:</b> ₹{cost:,.2f}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.caption("This log will be soft-deleted. Historical data remains archived in Google Sheets.")
+    st.write("")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("❌ Cancel", key=f"dlg_cancel_f_{eid}", use_container_width=True):
+            st.rerun()
+    with c2:
+        if st.button("🗑️ Yes, Delete", key=f"dlg_confirm_f_{eid}", type="primary", use_container_width=True):
+            soft_delete_record(TAB_FUEL, "expense_id", eid)
+            st.toast("🗑️ Fuel record deleted.")
+            st.rerun()
+
+
+@st.dialog("Delete Service Record")
+def confirm_delete_service_dialog(eid: str, date_str: str, stype: str, cost: float):
+    st.write("Are you sure you want to delete this service record?")
+    st.markdown(
+        f"""
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 14px; margin: 8px 0 16px 0; font-size: 0.9rem;">
+            📅 <b>Date:</b> {escape_html(date_str)} &nbsp;·&nbsp; 🔧 <b>Type:</b> {escape_html(stype)} &nbsp;·&nbsp; 💰 <b>Amount:</b> ₹{cost:,.2f}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.caption("This entry will be soft-deleted and archived in Google Sheets.")
+    st.write("")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("❌ Cancel", key=f"dlg_cancel_s_{eid}", use_container_width=True):
+            st.rerun()
+    with c2:
+        if st.button("🗑️ Yes, Delete", key=f"dlg_confirm_s_{eid}", type="primary", use_container_width=True):
+            soft_delete_record(TAB_SERVICE, "expense_id", eid)
+            st.toast("🗑️ Service entry deleted.")
+            st.rerun()
+
+
+@st.dialog("Delete Miscellaneous Expense")
+def confirm_delete_misc_dialog(eid: str, date_str: str, cat: str, amount: float):
+    st.write("Are you sure you want to delete this expense record?")
+    st.markdown(
+        f"""
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 14px; margin: 8px 0 16px 0; font-size: 0.9rem;">
+            📅 <b>Date:</b> {escape_html(date_str)} &nbsp;·&nbsp; 📦 <b>Category:</b> {escape_html(cat)} &nbsp;·&nbsp; 💰 <b>Amount:</b> ₹{amount:,.2f}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.caption("This entry will be soft-deleted and archived in Google Sheets.")
+    st.write("")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("❌ Cancel", key=f"dlg_cancel_m_{eid}", use_container_width=True):
+            st.rerun()
+    with c2:
+        if st.button("🗑️ Yes, Delete", key=f"dlg_confirm_m_{eid}", type="primary", use_container_width=True):
+            soft_delete_record(TAB_MISC, "expense_id", eid)
+            st.toast("🗑️ Expense entry deleted.")
+            st.rerun()
+
 # ── Fetch user's vehicles ────────────────────────────────────────────────────
 vehicles = get_records_by_user_list(TAB_VEHICLES, user_id)
 
@@ -692,17 +764,8 @@ with fuel_tab:
                             st.session_state["editing_fuel"] = row.to_dict()
                             st.rerun()
                     with f_c2:
-                        confirm_key = f"del_confirm_fuel_{eid}"
-                        if st.session_state.get(confirm_key):
-                            if st.button("⚠️ Confirm", key=f"f_del_yes_{eid}", type="primary", use_container_width=True):
-                                soft_delete_record(TAB_FUEL, "expense_id", eid)
-                                st.session_state.pop(confirm_key, None)
-                                st.toast("🗑️ Entry deleted.")
-                                st.rerun()
-                        else:
-                            if st.button("🗑️ Delete", key=f"f_del_{eid}", use_container_width=True):
-                                st.session_state[confirm_key] = True
-                                st.rerun()
+                        if st.button("🗑️ Delete", key=f"f_del_{eid}", use_container_width=True):
+                            confirm_delete_fuel_dialog(eid, str(r.get("date", "")), cur_qty, cur_cost)
     else:
         render_empty_state("⛽", "No Fuel Records Yet", "Log your first fuel fill-up using the form above.")
 
@@ -880,17 +943,8 @@ with service_tab:
                         st.session_state["editing_service"] = row.to_dict()
                         st.rerun()
                 with s_c2:
-                    confirm_key = f"del_confirm_svc_{eid}"
-                    if st.session_state.get(confirm_key):
-                        if st.button("⚠️ Confirm", key=f"s_del_yes_{eid}", type="primary", use_container_width=True):
-                            soft_delete_record(TAB_SERVICE, "expense_id", eid)
-                            st.session_state.pop(confirm_key, None)
-                            st.toast("🗑️ Service entry deleted.")
-                            st.rerun()
-                    else:
-                        if st.button("🗑️ Delete", key=f"s_del_{eid}", use_container_width=True):
-                            st.session_state[confirm_key] = True
-                            st.rerun()
+                    if st.button("🗑️ Delete", key=f"s_del_{eid}", use_container_width=True):
+                        confirm_delete_service_dialog(eid, str(row.get("date", "")), str(row.get("service_type", "")), _safe_float(row.get("total_service_cost")))
     else:
         render_empty_state("🔧", "No Service Records", "Maintenance and repairs for this vehicle will appear here.")
 
@@ -1038,17 +1092,8 @@ with misc_tab:
                         st.session_state["editing_misc"] = row.to_dict()
                         st.rerun()
                 with m_c2:
-                    confirm_key = f"del_confirm_misc_{eid}"
-                    if st.session_state.get(confirm_key):
-                        if st.button("⚠️ Confirm", key=f"m_del_yes_{eid}", type="primary", use_container_width=True):
-                            soft_delete_record(TAB_MISC, "expense_id", eid)
-                            st.session_state.pop(confirm_key, None)
-                            st.toast("🗑️ Entry deleted.")
-                            st.rerun()
-                    else:
-                        if st.button("🗑️ Delete", key=f"m_del_{eid}", use_container_width=True):
-                            st.session_state[confirm_key] = True
-                            st.rerun()
+                    if st.button("🗑️ Delete", key=f"m_del_{eid}", use_container_width=True):
+                        confirm_delete_misc_dialog(eid, str(row.get("date", "")), str(row.get("category", "")), _safe_float(row.get("amount")))
     else:
         render_empty_state("📦", "No Miscellaneous Expenses", "Tolls, parking, and miscellaneous expenses will appear here.")
 

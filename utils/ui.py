@@ -398,9 +398,61 @@ div[data-testid="stMetricValue"] {
 
 
 
+def render_unsaved_changes_guard():
+    """Inject browser guard that warns users before refreshing or leaving if they have unsaved form data."""
+    import streamlit.components.v1 as components
+    guard_js = """
+    <script>
+    (function() {
+        try {
+            const w = window.parent || window;
+            const doc = w.document;
+            if (w.__unsaved_guard_attached) return;
+            w.__unsaved_guard_attached = true;
+
+            let dirty = false;
+
+            doc.addEventListener('input', function(e) {
+                const tag = (e.target && e.target.tagName) || '';
+                if (tag === 'INPUT' || tag === 'TEXTAREA') {
+                    if (e.target.type !== 'password' && e.target.value && e.target.value.trim().length > 0) {
+                        dirty = true;
+                    }
+                }
+            }, true);
+
+            doc.addEventListener('submit', function() {
+                dirty = false;
+            }, true);
+
+            doc.addEventListener('click', function(e) {
+                const btn = e.target && e.target.closest ? e.target.closest('button') : null;
+                if (btn) {
+                    const txt = (btn.innerText || '').toLowerCase();
+                    if (btn.getAttribute('kind') === 'primary' || txt.includes('save') || txt.includes('submit') || txt.includes('add') || txt.includes('update') || txt.includes('sign in')) {
+                        dirty = false;
+                    }
+                }
+            }, true);
+
+            w.addEventListener('beforeunload', function(e) {
+                if (dirty) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                    return '';
+                }
+            });
+        } catch(err) {}
+    })();
+    </script>
+    """
+    components.html(guard_js, height=0, width=0)
+
+
 def apply_custom_css():
     """Inject custom SaaS theme styling with mobile & tablet responsiveness and PWA tags."""
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+    render_unsaved_changes_guard()
 
 
 def render_kpi(title: str, value: str, sub: str = "", badge_text: str = "", badge_type: str = "blue"):

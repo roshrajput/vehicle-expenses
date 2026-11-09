@@ -8,6 +8,7 @@ import json
 import streamlit as st
 from utils.sheets import check_connection, initialize_sheets
 from utils.constants import SHEET_ID, APP_NAME, APP_VERSION, APP_RELEASE_DATE, GIT_COMMIT_HASH
+from utils.auth import check_session_timeout
 from utils.ui import apply_custom_css
 
 # ── Page config ──────────────────────────────────────────────────────────────
@@ -131,6 +132,7 @@ dashboard_page = st.Page("pages/dashboard.py", title="Analytics", icon="📊")
 if st.session_state.get("user") is None:
     nav = st.navigation([login_page])
 else:
+    check_session_timeout()
     nav = st.navigation([home_page, expenses_page, dashboard_page])
 
 nav.run()
