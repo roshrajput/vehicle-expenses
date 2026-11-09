@@ -40,10 +40,7 @@ display_name = user.get("display_name", "User")
 st.markdown(
     f"""
     <div class="welcome-banner">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-            <div class="welcome-eyebrow">Garage & Fleet Overview</div>
-            <span class="version-pill">🚀 {APP_VERSION}</span>
-        </div>
+        <div class="welcome-eyebrow">Garage & Fleet Overview</div>
         <div class="welcome-title">Welcome, {display_name}! 👋</div>
         <div class="welcome-sub">Manage your registered vehicles, log expenses, and monitor fuel efficiency.</div>
     </div>
@@ -376,4 +373,4 @@ else:
                             st.session_state.confirm_delete_vehicle = None
                             st.rerun()
 
-render_app_footer()
+

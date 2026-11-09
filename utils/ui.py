@@ -397,17 +397,10 @@ div[data-testid="stMetricValue"] {
 """
 
 
-PWA_META = """
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="AutoExpense OS">
-<meta name="theme-color" content="#2563EB">
-"""
-
 
 def apply_custom_css():
     """Inject custom SaaS theme styling with mobile & tablet responsiveness and PWA tags."""
-    st.markdown(PWA_META + CUSTOM_CSS, unsafe_allow_html=True)
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
 def render_kpi(title: str, value: str, sub: str = "", badge_text: str = "", badge_type: str = "blue"):
@@ -456,16 +449,7 @@ def render_version_badge(extra_style: str = ""):
 
 
 def render_app_footer():
-    """Render a subtle SaaS app footer with version number and backend status."""
-    from utils.constants import APP_NAME, APP_VERSION, APP_RELEASE_DATE
-    st.markdown(
-        f"""
-        <div style="text-align: center; margin: 48px auto 20px auto; padding-top: 16px; border-top: 1px solid #E2E8F0; max-width: 650px; font-size: 0.78rem; color: #94A3B8;">
-            <b>{APP_NAME}</b> <span class="badge badge-slate" style="font-size: 0.72rem; padding: 2px 7px; margin: 0 4px;">{APP_VERSION}</span> &nbsp;·&nbsp; Build {APP_RELEASE_DATE} &nbsp;·&nbsp; Google Sheets Connected
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    pass
 
 
 def render_expiry_badge(label: str, expiry_val) -> str:

@@ -91,10 +91,9 @@ with top_v_col1:
                 ⛽
             </div>
             <div>
-                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 10px;">
                     <h2 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #0F172A;">{selected_vehicle_name}</h2>
                     {plate_html}
-                    <span class="version-pill">🚀 {APP_VERSION}</span>
                 </div>
                 <div style="font-size: 0.85rem; color: #64748B; margin-top: 2px;">
                     Category: <b>{v_type}</b> &nbsp;|&nbsp; Primary Fuel: <b>{v_fuel}</b>
@@ -587,11 +586,11 @@ with fuel_tab:
             unsafe_allow_html=True,
         )
 
-        # 3. Individual Fuel Cards in Dedicated Scrollable Container
+        # 3. Individual Fuel Cards in Clean Scroll Container
         df_fuel["_sort_date"] = pd.to_datetime(df_fuel["date"], errors="coerce")
         df_fuel = df_fuel.sort_values("_sort_date", ascending=False).reset_index(drop=True)
 
-        with st.container(height=480, border=True):
+        with st.container(height=520):
             for idx, row in df_fuel.iterrows():
                 odo_val = _safe_float(row.get("odo_reading_km"))
                 trip_val = _safe_float(row.get("trip_km"))
@@ -606,50 +605,48 @@ with fuel_tab:
                 mileage_badge = m_info.get("badge", "")
                 interval_dist = m_info.get("dist", 0.0)
 
-                tank_pill = '<span class="badge badge-green">⛽ Full</span>' if is_full else '<span class="badge badge-slate">Partial</span>'
-                is_baseline = "Baseline" in mileage_badge
-                odo_label = f"{fmt_number(odo_val, 1)} km (Baseline)" if (odo_val == 0 and is_baseline) else f"{fmt_number(odo_val, 1)} km"
-                dist_sub = f" &nbsp;•&nbsp; Dist: <b>{fmt_number(interval_dist, 1)} km</b>" if interval_dist > 0 else (f" &nbsp;•&nbsp; Trip: <b>{fmt_number(trip_val, 1)} km</b>" if trip_val > 0 else "")
-                comment_sub = f" &nbsp;•&nbsp; 💬 <i>{comment}</i>" if comment else ""
+                tank_pill = '<span class="badge badge-green">⛽ Full Tank</span>' if is_full else '<span class="badge badge-slate">Partial</span>'
+                odo_label = f"{fmt_number(odo_val, 1)} km (Baseline)" if (odo_val == 0 and "Baseline" in mileage_badge) else f"{fmt_number(odo_val, 1)} km"
+                dist_sub = f" &nbsp;·&nbsp; Distance: <b>{fmt_number(interval_dist, 1)} km</b>" if interval_dist > 0 else (f" &nbsp;·&nbsp; Trip: <b>{fmt_number(trip_val, 1)} km</b>" if trip_val > 0 else "")
 
-                card_c1, card_c2 = st.columns([8.2, 1.8], vertical_alignment="center")
-                with card_c1:
+                with st.container(border=True):
                     st.markdown(
                         f"""
-                        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 9px 13px; margin-bottom: 2px;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                                    <span style="font-weight: 700; color: #0F172A; font-size: 0.96rem;">{row.get('date', '')}</span>
+                        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <span style="font-weight: 700; color: #0F172A; font-size: 1.05rem;">{row.get('date', '')}</span>
                                     {tank_pill}
                                     {mileage_badge}
                                 </div>
-                                <div style="font-size: 1.15rem; font-weight: 800; color: #2563EB; white-space: nowrap;">
-                                    {fmt_currency(total_val)}
+                                <div style="font-size: 0.88rem; color: #475569; margin-top: 5px;">
+                                    <b>{qty_val:.2f} L</b> filled @ {fmt_currency(rate_val)}/L &nbsp;·&nbsp; ODO: <b>{odo_label}</b>{dist_sub}
                                 </div>
+                                {f'<div style="font-size: 0.82rem; color: #64748B; margin-top: 3px;">💬 {comment}</div>' if comment else ''}
                             </div>
-                            <div style="font-size: 0.82rem; color: #475569; margin-top: 4px;">
-                                <b>{qty_val:.2f} L</b> @ {fmt_currency(rate_val)}/L &nbsp;•&nbsp; ODO: <b>{odo_label}</b>{dist_sub}{comment_sub}
+                            <div style="text-align: right; white-space: nowrap;">
+                                <div style="font-size: 1.25rem; font-weight: 800; color: #2563EB;">{fmt_currency(total_val)}</div>
                             </div>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
-                with card_c2:
-                    f_c1, f_c2 = st.columns(2)
+                    st.write("")
+                    f_c1, f_c2, _ = st.columns([1, 1, 2])
                     with f_c1:
-                        if st.button("✏️", key=f"f_edit_{eid}", help="Edit this entry", use_container_width=True):
+                        if st.button("✏️ Edit", key=f"f_edit_{eid}", use_container_width=True):
                             st.session_state["editing_fuel"] = row.to_dict()
                             st.rerun()
                     with f_c2:
                         confirm_key = f"del_confirm_fuel_{eid}"
                         if st.session_state.get(confirm_key):
-                            if st.button("⚠️", key=f"f_del_yes_{eid}", help="Click again to confirm delete", type="primary", use_container_width=True):
+                            if st.button("⚠️ Confirm", key=f"f_del_yes_{eid}", type="primary", use_container_width=True):
                                 soft_delete_record(TAB_FUEL, "expense_id", eid)
                                 st.session_state.pop(confirm_key, None)
                                 st.toast("🗑️ Entry deleted.")
                                 st.rerun()
                         else:
-                            if st.button("🗑️", key=f"f_del_{eid}", help="Delete this entry", use_container_width=True):
+                            if st.button("🗑️ Delete", key=f"f_del_{eid}", use_container_width=True):
                                 st.session_state[confirm_key] = True
                                 st.rerun()
     else:
@@ -1001,4 +998,4 @@ with misc_tab:
     else:
         render_empty_state("📦", "No Miscellaneous Expenses", "Tolls, parking, and miscellaneous expenses will appear here.")
 
-render_app_footer()
+

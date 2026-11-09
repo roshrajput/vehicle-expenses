@@ -12,7 +12,7 @@ from utils.ui import apply_custom_css
 
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title=f"{APP_NAME} — {APP_VERSION}",
+    page_title="AutoExpense OS",
     page_icon="🚗",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -31,10 +31,7 @@ if not is_connected:
             <div style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; background: linear-gradient(135deg, #2563EB, #1D4ED8); border-radius: 18px; box-shadow: 0 10px 20px -5px rgba(37,99,235,0.4); margin-bottom: 16px;">
                 <span style="font-size: 2rem;">⚡</span>
             </div>
-            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                <h1 style="margin: 0; font-size: 2.2rem; font-weight: 800; color: #0F172A; letter-spacing: -0.03em;">Welcome to {APP_NAME}</h1>
-                <span class="badge badge-blue" style="font-size: 0.82rem; font-weight: 800; padding: 4px 9px; border-radius: 9999px;">{APP_VERSION}</span>
-            </div>
+            <h1 style="margin: 0; font-size: 2.2rem; font-weight: 800; color: #0F172A; letter-spacing: -0.03em;">Welcome to AutoExpense OS</h1>
             <p style="margin: 6px auto 0 auto; max-width: 500px; font-size: 1rem; color: #64748B;">
                 Quickly connect your Google Spreadsheet to activate real-time expense tracking.
             </p>
@@ -124,37 +121,6 @@ if not st.session_state.get("sheets_initialized"):
         st.error(f"Failed to initialize Google Sheet tabs: {e}")
         st.stop()
 
-# ── Sidebar Brand Header & Version Indicator ─────────────────────────────────
-with st.sidebar:
-    st.markdown(
-        f"""
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 2px 2px 14px 2px; border-bottom: 1px solid #E2E8F0; margin-bottom: 12px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 1.35rem;">🚗</span>
-                <div>
-                    <div style="font-weight: 800; color: #0F172A; font-size: 1.02rem; line-height: 1.2;">{APP_NAME}</div>
-                    <div style="font-size: 0.72rem; color: #64748B;">Expense & Mileage OS</div>
-                </div>
-            </div>
-            <span class="version-pill">🚀 {APP_VERSION}</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    curr_user = st.session_state.get("user")
-    if curr_user:
-        u_name = curr_user.get("display_name", curr_user.get("username", "Driver"))
-        st.markdown(
-            f"""
-            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
-                <div style="font-size: 0.82rem; font-weight: 600; color: #1E293B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">👤 {u_name}</div>
-                <span style="font-size: 0.72rem; color: #10B981; font-weight: 600;">● Active</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
 # ── Define pages ─────────────────────────────────────────────────────────────
 login_page = st.Page("pages/login.py", title="Login / Register", icon="🔐", default=True)
 home_page = st.Page("pages/home.py", title="My Garage", icon="🚗")
@@ -169,13 +135,12 @@ else:
 
 nav.run()
 
-# ── Sidebar System / Version Footer ──────────────────────────────────────────
+# ── Sidebar Version Footer ───────────────────────────────────────────────────
+curr_user = st.session_state.get("user")
 with st.sidebar:
     st.write("")
-    with st.expander(f"ℹ️ App Info ({APP_VERSION})", expanded=False):
-        st.caption(f"**App Name:** {APP_NAME}")
-        st.caption(f"**Version:** {APP_VERSION}")
-        if GIT_COMMIT_HASH:
-            st.caption(f"**Commit:** `{GIT_COMMIT_HASH}`")
-        st.caption(f"**Build:** {APP_RELEASE_DATE}")
-        st.caption("**Backend:** Google Sheets API (Online)")
+    if curr_user:
+        u_name = curr_user.get("display_name", curr_user.get("username", "Driver"))
+        st.caption(f"👤 {u_name} &nbsp;·&nbsp; {APP_VERSION}")
+    else:
+        st.caption(f"{APP_NAME} {APP_VERSION}")
